@@ -195,13 +195,13 @@
                                                 <td><%= new Date(product.created_at).toLocaleDateString('zh-CN') %></td>
                                                 <td>
                                                     <div class="btn-group btn-group-sm">
-                                                        <button type="button" class="btn btn-outline-primary" title="编辑">
+                                                        <button type="button" class="btn btn-outline-primary" title="编辑" onclick="editProduct(<%= product.id %>)">
                                                             <i class="fas fa-edit"></i>
                                                         </button>
-                                                        <button type="button" class="btn btn-outline-info" title="查看卡密">
+                                                        <button type="button" class="btn btn-outline-info" title="查看卡密" onclick="viewProductCards(<%= product.id %>, '<%= product.name %>')">
                                                             <i class="fas fa-credit-card"></i>
                                                         </button>
-                                                        <button type="button" class="btn btn-outline-danger" title="删除">
+                                                        <button type="button" class="btn btn-outline-danger" title="删除" onclick="deleteProduct(<%= product.id %>, '<%= product.name %>')">
                                                             <i class="fas fa-trash"></i>
                                                         </button>
                                                     </div>
@@ -337,15 +337,217 @@
         </div>
     </div>
 
+    <!-- 编辑商品模态框 -->
+    <div class="modal fade" id="editProductModal" tabindex="-1" aria-labelledby="editProductModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editProductModalLabel">
+                        <i class="fas fa-edit me-2"></i>
+                        编辑商品
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editProductForm">
+                        <input type="hidden" id="editProductId" name="id">
+
+                        <div class="mb-3">
+                            <label for="editProductName" class="form-label">商品名称 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="editProductName" name="name" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editProductCategory" class="form-label">商品分类</label>
+                            <select class="form-select" id="editProductCategory" name="category_id">
+                                <option value="">请选择分类</option>
+                                <% if (categories && categories.length > 0) { %>
+                                    <% categories.forEach(category => { %>
+                                        <option value="<%= category.id %>"><%= category.name %></option>
+                                    <% }); %>
+                                <% } %>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editProductDescription" class="form-label">商品描述</label>
+                            <textarea class="form-control" id="editProductDescription" name="description" rows="3"></textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="editProductPrice" class="form-label">售价 <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">¥</span>
+                                        <input type="number" class="form-control" id="editProductPrice" name="price" step="0.01" min="0" required>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="editProductOriginalPrice" class="form-label">原价</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">¥</span>
+                                        <input type="number" class="form-control" id="editProductOriginalPrice" name="original_price" step="0.01" min="0">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editProductMinStock" class="form-label">库存预警</label>
+                            <input type="number" class="form-control" id="editProductMinStock" name="min_stock_alert" min="0" value="10">
+                            <div class="form-text">当库存低于此数量时会显示预警</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editProductImage" class="form-label">商品图片</label>
+                            <input type="url" class="form-control" id="editProductImage" name="image_url" placeholder="图片URL">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editProductStatus" class="form-label">商品状态</label>
+                            <select class="form-select" id="editProductStatus" name="status">
+                                <option value="active">上架</option>
+                                <option value="inactive">下架</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="updateProduct()">
+                        <i class="fas fa-save me-1"></i>
+                        保存修改
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 查看商品卡密模态框 -->
+    <div class="modal fade" id="viewCardsModal" tabindex="-1" aria-labelledby="viewCardsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="viewCardsModalLabel">
+                        <i class="fas fa-credit-card me-2"></i>
+                        商品卡密列表
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="cardsLoadingSpinner" class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">加载中...</span>
+                        </div>
+                        <p class="mt-2 text-muted">正在加载卡密数据...</p>
+                    </div>
+
+                    <div id="cardsContent" style="display: none;">
+                        <div class="mb-3">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body">
+                                            <h6 class="card-title mb-1">可用卡密</h6>
+                                            <h4 class="text-success mb-0" id="availableCardsCount">0</h4>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body">
+                                            <h6 class="card-title mb-1">已售卡密</h6>
+                                            <h4 class="text-primary mb-0" id="soldCardsCount">0</h4>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>卡号</th>
+                                        <th>密码</th>
+                                        <th>状态</th>
+                                        <th>批次</th>
+                                        <th>创建时间</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cardsTableBody">
+                                    <!-- 卡密数据将通过JavaScript填充 -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div id="cardsEmptyState" class="text-center py-4" style="display: none;">
+                            <i class="fas fa-credit-card fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">该商品暂无卡密</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                    <a href="#" id="manageCardsLink" class="btn btn-primary">
+                        <i class="fas fa-cog me-1"></i>
+                        管理卡密
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
+        // 统一的提示函数
+        function showToast(message, type = 'success') {
+            // 创建提示元素
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            toast.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            document.body.appendChild(toast);
+
+            // 3秒后自动消失
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, 3000);
+        }
+
+        // 显示加载状态
+        function showLoading(button) {
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>处理中...';
+            button.disabled = true;
+            return originalText;
+        }
+
+        // 隐藏加载状态
+        function hideLoading(button, originalText) {
+            button.innerHTML = originalText;
+            button.disabled = false;
+        }
+
         function submitProduct() {
             const form = document.getElementById('addProductForm');
+            const submitBtn = form.querySelector('button[onclick="submitProduct()"]');
+            const originalText = showLoading(submitBtn);
+
             const formData = new FormData(form);
             const data = Object.fromEntries(formData);
-            
+
             fetch('/api/products', {
                 method: 'POST',
                 headers: {
@@ -355,15 +557,196 @@
             })
             .then(response => response.json())
             .then(result => {
+                hideLoading(submitBtn, originalText);
                 if (result.success) {
-                    location.reload();
+                    showToast('商品添加成功！', 'success');
+                    setTimeout(() => location.reload(), 1000);
                 } else {
-                    alert('添加失败: ' + result.message);
+                    showToast('添加失败: ' + result.message, 'danger');
                 }
             })
             .catch(error => {
-                alert('添加失败: ' + error.message);
+                hideLoading(submitBtn, originalText);
+                showToast('添加失败: ' + error.message, 'danger');
             });
+        }
+
+        // 编辑商品
+        function editProduct(productId) {
+            fetch(`/api/products/${productId}`)
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        const product = result.data;
+
+                        // 填充表单数据
+                        document.getElementById('editProductId').value = product.id;
+                        document.getElementById('editProductName').value = product.name || '';
+                        document.getElementById('editProductCategory').value = product.category_id || '';
+                        document.getElementById('editProductDescription').value = product.description || '';
+                        document.getElementById('editProductPrice').value = product.price || '';
+                        document.getElementById('editProductOriginalPrice').value = product.original_price || '';
+                        document.getElementById('editProductMinStock').value = product.min_stock_alert || 10;
+                        document.getElementById('editProductImage').value = product.image_url || '';
+                        document.getElementById('editProductStatus').value = product.status || 'active';
+
+                        // 显示模态框
+                        const modal = new bootstrap.Modal(document.getElementById('editProductModal'));
+                        modal.show();
+                    } else {
+                        alert('获取商品信息失败: ' + result.message);
+                    }
+                })
+                .catch(error => {
+                    alert('获取商品信息失败: ' + error.message);
+                });
+        }
+
+        // 更新商品
+        function updateProduct() {
+            const form = document.getElementById('editProductForm');
+            const submitBtn = form.querySelector('button[onclick="updateProduct()"]');
+            const originalText = showLoading(submitBtn);
+
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData);
+            const productId = data.id;
+
+            // 移除id字段，避免在更新时传递
+            delete data.id;
+
+            fetch(`/api/products/${productId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                hideLoading(submitBtn, originalText);
+                if (result.success) {
+                    showToast('商品更新成功！', 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showToast('更新失败: ' + result.message, 'danger');
+                }
+            })
+            .catch(error => {
+                hideLoading(submitBtn, originalText);
+                showToast('更新失败: ' + error.message, 'danger');
+            });
+        }
+
+        // 删除商品
+        function deleteProduct(productId, productName) {
+            if (confirm(`确定要删除商品 "${productName}" 吗？\n\n注意：删除商品将同时删除其关联的所有卡密！`)) {
+                // 显示删除进度
+                showToast('正在删除商品...', 'info');
+
+                fetch(`/api/products/${productId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        showToast('商品删除成功！', 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showToast('删除失败: ' + result.message, 'danger');
+                    }
+                })
+                .catch(error => {
+                    showToast('删除失败: ' + error.message, 'danger');
+                });
+            }
+        }
+
+        // 查看商品卡密
+        function viewProductCards(productId, productName) {
+            // 更新模态框标题
+            document.getElementById('viewCardsModalLabel').innerHTML =
+                `<i class="fas fa-credit-card me-2"></i>${productName} - 卡密列表`;
+
+            // 设置管理卡密链接
+            document.getElementById('manageCardsLink').href = `/admin/cards?product_id=${productId}`;
+
+            // 显示加载状态
+            document.getElementById('cardsLoadingSpinner').style.display = 'block';
+            document.getElementById('cardsContent').style.display = 'none';
+
+            // 显示模态框
+            const modal = new bootstrap.Modal(document.getElementById('viewCardsModal'));
+            modal.show();
+
+            // 获取卡密数据
+            fetch(`/api/products/${productId}/cards`)
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        const cards = result.data.cards || [];
+
+                        // 统计卡密状态
+                        const availableCards = cards.filter(card => card.status === 'available').length;
+                        const soldCards = cards.filter(card => card.status === 'sold').length;
+
+                        // 更新统计数据
+                        document.getElementById('availableCardsCount').textContent = availableCards;
+                        document.getElementById('soldCardsCount').textContent = soldCards;
+
+                        // 填充卡密表格
+                        const tableBody = document.getElementById('cardsTableBody');
+                        tableBody.innerHTML = '';
+
+                        if (cards.length > 0) {
+                            cards.forEach(card => {
+                                const row = document.createElement('tr');
+
+                                // 状态样式
+                                let statusBadge = '';
+                                switch(card.status) {
+                                    case 'available':
+                                        statusBadge = '<span class="badge bg-success">可用</span>';
+                                        break;
+                                    case 'sold':
+                                        statusBadge = '<span class="badge bg-primary">已售</span>';
+                                        break;
+                                    case 'expired':
+                                        statusBadge = '<span class="badge bg-danger">过期</span>';
+                                        break;
+                                    default:
+                                        statusBadge = `<span class="badge bg-secondary">${card.status}</span>`;
+                                }
+
+                                row.innerHTML = `
+                                    <td><code>${card.card_number}</code></td>
+                                    <td><code>${card.card_password}</code></td>
+                                    <td>${statusBadge}</td>
+                                    <td><small class="text-muted">${card.batch_id || '-'}</small></td>
+                                    <td><small class="text-muted">${new Date(card.created_at).toLocaleString('zh-CN')}</small></td>
+                                `;
+
+                                tableBody.appendChild(row);
+                            });
+
+                            document.getElementById('cardsEmptyState').style.display = 'none';
+                        } else {
+                            document.getElementById('cardsEmptyState').style.display = 'block';
+                        }
+
+                        // 隐藏加载状态，显示内容
+                        document.getElementById('cardsLoadingSpinner').style.display = 'none';
+                        document.getElementById('cardsContent').style.display = 'block';
+
+                    } else {
+                        alert('获取卡密数据失败: ' + result.message);
+                        modal.hide();
+                    }
+                })
+                .catch(error => {
+                    alert('获取卡密数据失败: ' + error.message);
+                    modal.hide();
+                });
         }
     </script>
 </body>

@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - Telegram卡密销售系统</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            border-radius: 8px;
+            margin: 2px 0;
+            transition: all 0.3s;
+        }
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+        }
+        .table th {
+            border-top: none;
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        .badge-status {
+            font-size: 0.75rem;
+            padding: 0.375rem 0.75rem;
+        }
+        .card-password {
+            font-family: 'Courier New', monospace;
+            background-color: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        .filter-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-outline-light:hover {
+            color: #667eea;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid">
+        <div class="row">
+            <!-- 侧边栏 -->
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <div class="text-center mb-4">
+                        <h5 class="text-white">
+                            <i class="fas fa-store me-2"></i>
+                            卡密销售系统
+                        </h5>
+                        <small class="text-white-50">欢迎，<%= admin.username %></small>
+                    </div>
+                    
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link <%= currentPage === 'dashboard' ? 'active' : '' %>" href="/admin/dashboard">
+                                <i class="fas fa-tachometer-alt me-2"></i>
+                                仪表板
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <%= currentPage === 'products' ? 'active' : '' %>" href="/admin/products">
+                                <i class="fas fa-box me-2"></i>
+                                商品管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <%= currentPage === 'orders' ? 'active' : '' %>" href="/admin/orders">
+                                <i class="fas fa-shopping-cart me-2"></i>
+                                订单管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <%= currentPage === 'cards' ? 'active' : '' %>" href="/admin/cards">
+                                <i class="fas fa-credit-card me-2"></i>
+                                卡密管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <%= currentPage === 'users' ? 'active' : '' %>" href="/admin/users">
+                                <i class="fas fa-users me-2"></i>
+                                用户管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <%= currentPage === 'reports' ? 'active' : '' %>" href="/admin/reports">
+                                <i class="fas fa-chart-bar me-2"></i>
+                                统计报表
+                            </a>
+                        </li>
+                        <li class="nav-item mt-3">
+                            <a class="nav-link" href="/admin/logout">
+                                <i class="fas fa-sign-out-alt me-2"></i>
+                                退出登录
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- 主内容区 -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">
+                        <i class="fas fa-credit-card me-2"></i>
+                        卡密管理
+                    </h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <div class="btn-group me-2">
+                            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addCardModal">
+                                <i class="fas fa-plus me-1"></i>
+                                添加卡密
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-upload me-1"></i>
+                                批量导入
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-download me-1"></i>
+                                导出数据
+                            </button>
+                        </div>
+                        <div class="btn-group" id="batchOperations" style="display: none;">
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteBatchCards()">
+                                <i class="fas fa-trash me-1"></i>
+                                批量删除
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearSelection()">
+                                <i class="fas fa-times me-1"></i>
+                                取消选择
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 筛选器 -->
+                <div class="card filter-card mb-4">
+                    <div class="card-body">
+                        <form method="GET" action="/admin/cards" class="row g-3">
+                            <div class="col-md-3">
+                                <label for="product_id" class="form-label">商品筛选</label>
+                                <select class="form-select" id="product_id" name="product_id">
+                                    <option value="">全部商品</option>
+                                    <% if (products && products.length > 0) { %>
+                                        <% products.forEach(product => { %>
+                                            <option value="<%= product.id %>" <%= currentProductId == product.id ? 'selected' : '' %>>
+                                                <%= product.name %>
+                                            </option>
+                                        <% }); %>
+                                    <% } %>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="status" class="form-label">状态筛选</label>
+                                <select class="form-select" id="status" name="status">
+                                    <option value="available" <%= currentStatus === 'available' ? 'selected' : '' %>>可用</option>
+                                    <option value="sold" <%= currentStatus === 'sold' ? 'selected' : '' %>>已售出</option>
+                                    <option value="expired" <%= currentStatus === 'expired' ? 'selected' : '' %>>已过期</option>
+                                    <option value="reserved" <%= currentStatus === 'reserved' ? 'selected' : '' %>>已预留</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-outline-light">
+                                        <i class="fas fa-search me-1"></i>
+                                        筛选
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    <a href="/admin/cards" class="btn btn-outline-light">
+                                        <i class="fas fa-refresh me-1"></i>
+                                        重置
+                                    </a>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- 卡密列表 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="m-0 font-weight-bold">
+                            <i class="fas fa-list me-2"></i>
+                            卡密列表
+                            <span class="badge bg-primary ms-2">
+                                共 <%= pagination.total || 0 %> 条记录
+                            </span>
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>
+                                            <input type="checkbox" class="form-check-input" id="selectAll">
+                                        </th>
+                                        <th>ID</th>
+                                        <th>卡号</th>
+                                        <th>密码</th>
+                                        <th>商品</th>
+                                        <th>批次</th>
+                                        <th>状态</th>
+                                        <th>过期时间</th>
+                                        <th>创建时间</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (cards && cards.length > 0) { %>
+                                        <% cards.forEach(card => { %>
+                                            <tr>
+                                                <td>
+                                                    <input type="checkbox" class="form-check-input card-checkbox" value="<%= card.id %>">
+                                                </td>
+                                                <td><%= card.id %></td>
+                                                <td><code><%= card.card_number %></code></td>
+                                                <td>
+                                                    <span class="card-password">
+                                                        <span class="password-hidden">••••••••</span>
+                                                        <span class="password-visible d-none"><%= card.card_password %></span>
+                                                        <button type="button" class="btn btn-sm btn-link p-0 ms-1 toggle-password" title="显示/隐藏密码">
+                                                            <i class="fas fa-eye"></i>
+                                                        </button>
+                                                    </span>
+                                                </td>
+                                                <td><%= card.product_name || '未知商品' %></td>
+                                                <td><%= card.batch_id || '-' %></td>
+                                                <td>
+                                                    <% if (card.status === 'available') { %>
+                                                        <span class="badge bg-success badge-status">可用</span>
+                                                    <% } else if (card.status === 'sold') { %>
+                                                        <span class="badge bg-primary badge-status">已售出</span>
+                                                    <% } else if (card.status === 'expired') { %>
+                                                        <span class="badge bg-danger badge-status">已过期</span>
+                                                    <% } else if (card.status === 'reserved') { %>
+                                                        <span class="badge bg-warning badge-status">已预留</span>
+                                                    <% } else { %>
+                                                        <span class="badge bg-secondary badge-status"><%= card.status %></span>
+                                                    <% } %>
+                                                </td>
+                                                <td>
+                                                    <% if (card.expire_at) { %>
+                                                        <%= new Date(card.expire_at).toLocaleString('zh-CN') %>
+                                                    <% } else { %>
+                                                        <span class="text-muted">永不过期</span>
+                                                    <% } %>
+                                                </td>
+                                                <td><%= new Date(card.created_at).toLocaleString('zh-CN') %></td>
+                                                <td>
+                                                    <div class="btn-group btn-group-sm">
+                                                        <button type="button" class="btn btn-outline-primary btn-sm" title="编辑" onclick="editCard(<%= card.id %>)">
+                                                            <i class="fas fa-edit"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-outline-danger btn-sm" title="删除" onclick="deleteCard(<%= card.id %>, '<%= card.card_number %>')">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        <% }); %>
+                                    <% } else { %>
+                                        <tr>
+                                            <td colspan="10" class="text-center text-muted py-4">
+                                                <i class="fas fa-credit-card fa-3x mb-3 opacity-25"></i>
+                                                <p>暂无卡密数据</p>
+                                            </td>
+                                        </tr>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 分页 -->
+                <% if (pagination && pagination.totalPages > 1) { %>
+                    <nav aria-label="卡密列表分页" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            <% if (pagination.hasPrev) { %>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=<%= pagination.page - 1 %>&product_id=<%= currentProductId %>&status=<%= currentStatus %>">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </a>
+                                </li>
+                            <% } else { %>
+                                <li class="page-item disabled">
+                                    <span class="page-link">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </span>
+                                </li>
+                            <% } %>
+
+                            <% for (let i = Math.max(1, pagination.page - 2); i <= Math.min(pagination.totalPages, pagination.page + 2); i++) { %>
+                                <li class="page-item <%= i === pagination.page ? 'active' : '' %>">
+                                    <a class="page-link" href="?page=<%= i %>&product_id=<%= currentProductId %>&status=<%= currentStatus %>">
+                                        <%= i %>
+                                    </a>
+                                </li>
+                            <% } %>
+
+                            <% if (pagination.hasNext) { %>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=<%= pagination.page + 1 %>&product_id=<%= currentProductId %>&status=<%= currentStatus %>">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                </li>
+                            <% } else { %>
+                                <li class="page-item disabled">
+                                    <span class="page-link">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </span>
+                                </li>
+                            <% } %>
+                        </ul>
+                    </nav>
+                <% } %>
+            </main>
+        </div>
+    </div>
+
+    <!-- 添加卡密模态框 -->
+    <div class="modal fade" id="addCardModal" tabindex="-1" aria-labelledby="addCardModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addCardModalLabel">
+                        <i class="fas fa-plus me-2"></i>
+                        添加卡密
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="addCardForm">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="cardProductId" class="form-label">商品 <span class="text-danger">*</span></label>
+                            <select class="form-select" id="cardProductId" name="product_id" required>
+                                <option value="">请选择商品</option>
+                                <% if (products && products.length > 0) { %>
+                                    <% products.forEach(product => { %>
+                                        <option value="<%= product.id %>"><%= product.name %></option>
+                                    <% }); %>
+                                <% } %>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="cardNumber" class="form-label">卡号 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="cardNumber" name="card_number" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="cardPassword" class="form-label">密码 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="cardPassword" name="card_password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="batchId" class="form-label">批次ID</label>
+                            <input type="text" class="form-control" id="batchId" name="batch_id" placeholder="留空自动生成">
+                        </div>
+                        <div class="mb-3">
+                            <label for="expireAt" class="form-label">过期时间</label>
+                            <input type="datetime-local" class="form-control" id="expireAt" name="expire_at">
+                            <div class="form-text">留空表示永不过期</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>
+                            保存
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑卡密模态框 -->
+    <div class="modal fade" id="editCardModal" tabindex="-1" aria-labelledby="editCardModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editCardModalLabel">
+                        <i class="fas fa-edit me-2"></i>
+                        编辑卡密
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="editCardForm">
+                    <div class="modal-body">
+                        <input type="hidden" id="editCardId" name="id">
+
+                        <div class="mb-3">
+                            <label for="editCardProductId" class="form-label">商品 <span class="text-danger">*</span></label>
+                            <select class="form-select" id="editCardProductId" name="product_id" required>
+                                <option value="">请选择商品</option>
+                                <% if (products && products.length > 0) { %>
+                                    <% products.forEach(product => { %>
+                                        <option value="<%= product.id %>"><%= product.name %></option>
+                                    <% }); %>
+                                <% } %>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editCardNumber" class="form-label">卡号 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="editCardNumber" name="card_number" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editCardPassword" class="form-label">密码 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="editCardPassword" name="card_password" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editBatchId" class="form-label">批次号</label>
+                            <input type="text" class="form-control" id="editBatchId" name="batch_id">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editCardStatus" class="form-label">状态</label>
+                            <select class="form-select" id="editCardStatus" name="status">
+                                <option value="available">可用</option>
+                                <option value="sold">已售出</option>
+                                <option value="expired">已过期</option>
+                                <option value="reserved">已预留</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editExpireAt" class="form-label">过期时间</label>
+                            <input type="datetime-local" class="form-control" id="editExpireAt" name="expire_at">
+                            <div class="form-text">留空表示永不过期</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>
+                            保存修改
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // 统一的提示函数
+        function showToast(message, type = 'success') {
+            // 创建提示元素
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            toast.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            document.body.appendChild(toast);
+
+            // 3秒后自动消失
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, 3000);
+        }
+
+        // 显示加载状态
+        function showLoading(button) {
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>处理中...';
+            button.disabled = true;
+            return originalText;
+        }
+
+        // 隐藏加载状态
+        function hideLoading(button, originalText) {
+            button.innerHTML = originalText;
+            button.disabled = false;
+        }
+
+        // 全选功能
+        document.getElementById('selectAll').addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('.card-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateBatchOperationsVisibility();
+        });
+
+        // 监听单个复选框变化
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('card-checkbox')) {
+                updateBatchOperationsVisibility();
+
+                // 更新全选状态
+                const checkboxes = document.querySelectorAll('.card-checkbox');
+                const checkedBoxes = document.querySelectorAll('.card-checkbox:checked');
+                const selectAllCheckbox = document.getElementById('selectAll');
+
+                if (checkedBoxes.length === 0) {
+                    selectAllCheckbox.indeterminate = false;
+                    selectAllCheckbox.checked = false;
+                } else if (checkedBoxes.length === checkboxes.length) {
+                    selectAllCheckbox.indeterminate = false;
+                    selectAllCheckbox.checked = true;
+                } else {
+                    selectAllCheckbox.indeterminate = true;
+                }
+            }
+        });
+
+        // 更新批量操作按钮显示状态
+        function updateBatchOperationsVisibility() {
+            const checkedBoxes = document.querySelectorAll('.card-checkbox:checked');
+            const batchOperations = document.getElementById('batchOperations');
+
+            if (checkedBoxes.length > 0) {
+                batchOperations.style.display = 'block';
+            } else {
+                batchOperations.style.display = 'none';
+            }
+        }
+
+        // 清除选择
+        function clearSelection() {
+            const checkboxes = document.querySelectorAll('.card-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            document.getElementById('selectAll').checked = false;
+            document.getElementById('selectAll').indeterminate = false;
+            updateBatchOperationsVisibility();
+        }
+
+        // 批量删除卡密
+        function deleteBatchCards() {
+            const checkedBoxes = document.querySelectorAll('.card-checkbox:checked');
+            const cardIds = Array.from(checkedBoxes).map(checkbox => checkbox.value);
+
+            if (cardIds.length === 0) {
+                showToast('请先选择要删除的卡密', 'warning');
+                return;
+            }
+
+            if (confirm(`确定要删除选中的 ${cardIds.length} 张卡密吗？\n\n注意：此操作不可恢复！`)) {
+                showToast(`正在删除 ${cardIds.length} 张卡密...`, 'info');
+
+                // 逐个删除卡密
+                let deletedCount = 0;
+                let errorCount = 0;
+
+                const deletePromises = cardIds.map(cardId => {
+                    return fetch(`/api/cards/${cardId}`, {
+                        method: 'DELETE'
+                    })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success) {
+                            deletedCount++;
+                        } else {
+                            errorCount++;
+                            console.error(`删除卡密 ${cardId} 失败:`, result.message);
+                        }
+                    })
+                    .catch(error => {
+                        errorCount++;
+                        console.error(`删除卡密 ${cardId} 失败:`, error);
+                    });
+                });
+
+                Promise.all(deletePromises).then(() => {
+                    if (errorCount === 0) {
+                        showToast(`成功删除 ${deletedCount} 张卡密！`, 'success');
+                    } else {
+                        showToast(`删除完成！成功：${deletedCount} 张，失败：${errorCount} 张`, 'warning');
+                    }
+                    setTimeout(() => location.reload(), 1500);
+                });
+            }
+        }
+
+        // 密码显示/隐藏功能
+        document.querySelectorAll('.toggle-password').forEach(button => {
+            button.addEventListener('click', function() {
+                const passwordContainer = this.closest('.card-password');
+                const hiddenSpan = passwordContainer.querySelector('.password-hidden');
+                const visibleSpan = passwordContainer.querySelector('.password-visible');
+                const icon = this.querySelector('i');
+
+                if (hiddenSpan.classList.contains('d-none')) {
+                    hiddenSpan.classList.remove('d-none');
+                    visibleSpan.classList.add('d-none');
+                    icon.className = 'fas fa-eye';
+                } else {
+                    hiddenSpan.classList.add('d-none');
+                    visibleSpan.classList.remove('d-none');
+                    icon.className = 'fas fa-eye-slash';
+                }
+            });
+        });
+
+        // 添加卡密表单提交
+        document.getElementById('addCardForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = showLoading(submitBtn);
+
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData);
+
+            fetch('/api/cards', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                hideLoading(submitBtn, originalText);
+                if (result.success) {
+                    showToast('卡密添加成功！', 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showToast('添加失败：' + result.message, 'danger');
+                }
+            })
+            .catch(error => {
+                hideLoading(submitBtn, originalText);
+                console.error('Error:', error);
+                showToast('添加失败，请重试', 'danger');
+            });
+        });
+
+        // 编辑卡密表单提交
+        document.getElementById('editCardForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = showLoading(submitBtn);
+
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData);
+            const cardId = data.id;
+
+            // 移除id字段，避免在更新时传递
+            delete data.id;
+
+            fetch(`/api/cards/${cardId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                hideLoading(submitBtn, originalText);
+                if (result.success) {
+                    showToast('卡密更新成功！', 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showToast('更新失败：' + result.message, 'danger');
+                }
+            })
+            .catch(error => {
+                hideLoading(submitBtn, originalText);
+                console.error('Error:', error);
+                showToast('更新失败，请重试', 'danger');
+            });
+        });
+
+        // 编辑卡密
+        function editCard(cardId) {
+            fetch(`/api/cards/${cardId}`)
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        const card = result.data;
+
+                        // 填充表单数据
+                        document.getElementById('editCardId').value = card.id;
+                        document.getElementById('editCardProductId').value = card.product_id || '';
+                        document.getElementById('editCardNumber').value = card.card_number || '';
+                        document.getElementById('editCardPassword').value = card.card_password || '';
+                        document.getElementById('editBatchId').value = card.batch_id || '';
+                        document.getElementById('editCardStatus').value = card.status || 'available';
+
+                        // 处理过期时间
+                        if (card.expire_at) {
+                            const expireDate = new Date(card.expire_at);
+                            const localDateTime = new Date(expireDate.getTime() - expireDate.getTimezoneOffset() * 60000);
+                            document.getElementById('editExpireAt').value = localDateTime.toISOString().slice(0, 16);
+                        } else {
+                            document.getElementById('editExpireAt').value = '';
+                        }
+
+                        // 显示模态框
+                        const modal = new bootstrap.Modal(document.getElementById('editCardModal'));
+                        modal.show();
+                    } else {
+                        alert('获取卡密信息失败: ' + result.message);
+                    }
+                })
+                .catch(error => {
+                    alert('获取卡密信息失败: ' + error.message);
+                });
+        }
+
+        // 删除卡密
+        function deleteCard(cardId, cardNumber) {
+            if (confirm(`确定要删除卡密 "${cardNumber}" 吗？\n\n注意：此操作不可恢复！`)) {
+                showToast('正在删除卡密...', 'info');
+
+                fetch(`/api/cards/${cardId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        showToast('卡密删除成功！', 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showToast('删除失败: ' + result.message, 'danger');
+                    }
+                })
+                .catch(error => {
+                    showToast('删除失败: ' + error.message, 'danger');
+                });
+            }
+        }
+    </script>
+</body>
+</html>

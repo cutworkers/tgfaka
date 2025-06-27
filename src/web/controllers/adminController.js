@@ -297,22 +297,35 @@ class AdminController {
   static async users(req, res) {
     try {
       const page = parseInt(req.query.page) || 1;
+      const search = req.query.search || '';
       const limit = 20;
       const offset = (page - 1) * limit;
 
+      let whereClause = '';
+      const params = [];
+
+      if (search) {
+        whereClause = 'WHERE u.username LIKE ? OR u.telegram_id LIKE ? OR u.first_name LIKE ? OR u.last_name LIKE ?';
+        const searchPattern = `%${search}%`;
+        params.push(searchPattern, searchPattern, searchPattern, searchPattern);
+      }
+
       const users = await databaseService.query(`
-        SELECT u.*, 
+        SELECT u.*,
                COUNT(o.id) as order_count,
                SUM(CASE WHEN o.status = 'completed' THEN o.total_amount ELSE 0 END) as total_spent
         FROM users u
         LEFT JOIN orders o ON u.id = o.user_id
+        ${whereClause}
         GROUP BY u.id
         ORDER BY u.created_at DESC
         LIMIT ? OFFSET ?
-      `, [limit, offset]);
+      `, [...params, limit, offset]);
 
       // 获取总数
-      const totalResult = await databaseService.get('SELECT COUNT(*) as count FROM users');
+      const totalResult = await databaseService.get(`
+        SELECT COUNT(*) as count FROM users u ${whereClause}
+      `, params);
       const total = totalResult.count;
       const totalPages = Math.ceil(total / limit);
 
@@ -320,10 +333,12 @@ class AdminController {
         title: '用户管理',
         admin: req.session.admin,
         users,
+        search,
         currentPage: 'users',
         pagination: {
           page,
           totalPages,
+          total,
           hasNext: page < totalPages,
           hasPrev: page > 1
         }
@@ -378,6 +393,7 @@ class AdminController {
         pagination: {
           page,
           totalPages,
+          total,
           hasNext: page < totalPages,
           hasPrev: page > 1
         }

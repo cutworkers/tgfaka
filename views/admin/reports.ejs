@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - Telegram卡密销售系统</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            border-radius: 8px;
+            margin: 2px 0;
+            transition: all 0.3s;
+        }
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .stat-card-success {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        .stat-card-warning {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        .stat-card-info {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+        .table th {
+            border-top: none;
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        .filter-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-outline-light:hover {
+            color: #667eea;
+        }
+        .chart-container {
+            position: relative;
+            height: 400px;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid">
+        <div class="row">
+            <!-- 侧边栏 -->
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <div class="text-center mb-4">
+                        <h5 class="text-white">
+                            <i class="fas fa-store me-2"></i>
+                            卡密销售系统
+                        </h5>
+                        <small class="text-white-50">欢迎，<%= admin.username %></small>
+                    </div>
+                    
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link <%= currentPage === 'dashboard' ? 'active' : '' %>" href="/admin/dashboard">
+                                <i class="fas fa-tachometer-alt me-2"></i>
+                                仪表板
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <%= currentPage === 'products' ? 'active' : '' %>" href="/admin/products">
+                                <i class="fas fa-box me-2"></i>
+                                商品管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <%= currentPage === 'orders' ? 'active' : '' %>" href="/admin/orders">
+                                <i class="fas fa-shopping-cart me-2"></i>
+                                订单管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <%= currentPage === 'cards' ? 'active' : '' %>" href="/admin/cards">
+                                <i class="fas fa-credit-card me-2"></i>
+                                卡密管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <%= currentPage === 'users' ? 'active' : '' %>" href="/admin/users">
+                                <i class="fas fa-users me-2"></i>
+                                用户管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <%= currentPage === 'reports' ? 'active' : '' %>" href="/admin/reports">
+                                <i class="fas fa-chart-bar me-2"></i>
+                                统计报表
+                            </a>
+                        </li>
+                        <li class="nav-item mt-3">
+                            <a class="nav-link" href="/admin/logout">
+                                <i class="fas fa-sign-out-alt me-2"></i>
+                                退出登录
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- 主内容区 -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        统计报表
+                    </h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <div class="btn-group me-2">
+                            <button type="button" class="btn btn-sm btn-primary" onclick="exportReport()">
+                                <i class="fas fa-download me-1"></i>
+                                导出报表
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="printReport()">
+                                <i class="fas fa-print me-1"></i>
+                                打印报表
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 日期筛选器 -->
+                <div class="card filter-card mb-4">
+                    <div class="card-body">
+                        <form method="GET" action="/admin/reports" class="row g-3">
+                            <div class="col-md-4">
+                                <label for="date_from" class="form-label">开始日期</label>
+                                <input type="date" class="form-control" id="date_from" name="date_from" value="<%= dateFrom %>">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="date_to" class="form-label">结束日期</label>
+                                <input type="date" class="form-control" id="date_to" name="date_to" value="<%= dateTo %>">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-outline-light">
+                                        <i class="fas fa-search me-1"></i>
+                                        查询
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    <a href="/admin/reports" class="btn btn-outline-light">
+                                        <i class="fas fa-refresh me-1"></i>
+                                        重置
+                                    </a>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- 统计概览 -->
+                <div class="row mb-4">
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card stat-card">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-uppercase mb-1">总订单数</div>
+                                        <div class="h5 mb-0 font-weight-bold"><%= stats.orders?.total || 0 %></div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-shopping-cart fa-2x opacity-75"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card stat-card-success">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-uppercase mb-1">已完成订单</div>
+                                        <div class="h5 mb-0 font-weight-bold"><%= stats.orders?.completed || 0 %></div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card stat-card-info">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-uppercase mb-1">总收入</div>
+                                        <div class="h5 mb-0 font-weight-bold">¥<%= (stats.orders?.total_revenue || 0).toFixed(2) %></div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-dollar-sign fa-2x opacity-75"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card stat-card-warning">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-uppercase mb-1">待处理订单</div>
+                                        <div class="h5 mb-0 font-weight-bold"><%= stats.orders?.pending || 0 %></div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-clock fa-2x opacity-75"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 图表区域 -->
+                <div class="row mb-4">
+                    <div class="col-lg-8 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold">
+                                    <i class="fas fa-chart-line me-2"></i>
+                                    每日销售趋势
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="dailySalesChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold">
+                                    <i class="fas fa-chart-pie me-2"></i>
+                                    支付方式分布
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="paymentMethodChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 详细数据表格 -->
+                <div class="row">
+                    <div class="col-lg-6 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold">
+                                    <i class="fas fa-credit-card me-2"></i>
+                                    支付方式统计
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>支付方式</th>
+                                                <th>订单数</th>
+                                                <th>金额</th>
+                                                <th>占比</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <% if (stats.payment_methods && stats.payment_methods.length > 0) { %>
+                                                <%
+                                                const totalAmount = stats.payment_methods.reduce((sum, pm) => sum + parseFloat(pm.total_amount || 0), 0);
+                                                %>
+                                                <% stats.payment_methods.forEach(pm => { %>
+                                                    <tr>
+                                                        <td>
+                                                            <% if (pm.payment_method === 'usdt') { %>
+                                                                <i class="fab fa-bitcoin text-warning me-2"></i>USDT
+                                                            <% } else if (pm.payment_method === 'alipay') { %>
+                                                                <i class="fab fa-alipay text-primary me-2"></i>支付宝
+                                                            <% } else { %>
+                                                                <i class="fas fa-credit-card me-2"></i><%= pm.payment_method %>
+                                                            <% } %>
+                                                        </td>
+                                                        <td><%= pm.count %></td>
+                                                        <td>¥<%= parseFloat(pm.total_amount).toFixed(2) %></td>
+                                                        <td>
+                                                            <% const percentage = totalAmount > 0 ? (parseFloat(pm.total_amount) / totalAmount * 100).toFixed(1) : 0 %>
+                                                            <%= percentage %>%
+                                                        </td>
+                                                    </tr>
+                                                <% }); %>
+                                            <% } else { %>
+                                                <tr>
+                                                    <td colspan="4" class="text-center text-muted">暂无数据</td>
+                                                </tr>
+                                            <% } %>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-6 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold">
+                                    <i class="fas fa-calendar-alt me-2"></i>
+                                    每日销售明细
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                    <table class="table table-hover table-sm">
+                                        <thead class="sticky-top">
+                                            <tr>
+                                                <th>日期</th>
+                                                <th>订单数</th>
+                                                <th>收入</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <% if (stats.daily_sales && stats.daily_sales.length > 0) { %>
+                                                <% stats.daily_sales.forEach(day => { %>
+                                                    <tr>
+                                                        <td><%= day.date %></td>
+                                                        <td><%= day.order_count %></td>
+                                                        <td>¥<%= parseFloat(day.revenue).toFixed(2) %></td>
+                                                    </tr>
+                                                <% }); %>
+                                            <% } else { %>
+                                                <tr>
+                                                    <td colspan="3" class="text-center text-muted">暂无数据</td>
+                                                </tr>
+                                            <% } %>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // 每日销售趋势图
+        const dailySalesData = <%- JSON.stringify(stats.daily_sales || []) %>;
+        const dailySalesCtx = document.getElementById('dailySalesChart').getContext('2d');
+
+        new Chart(dailySalesCtx, {
+            type: 'line',
+            data: {
+                labels: dailySalesData.map(item => item.date),
+                datasets: [{
+                    label: '订单数',
+                    data: dailySalesData.map(item => item.order_count),
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1,
+                    yAxisID: 'y'
+                }, {
+                    label: '收入 (¥)',
+                    data: dailySalesData.map(item => parseFloat(item.revenue)),
+                    borderColor: 'rgb(255, 99, 132)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    tension: 0.1,
+                    yAxisID: 'y1'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                scales: {
+                    x: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: '日期'
+                        }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: '订单数'
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: '收入 (¥)'
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                    }
+                }
+            }
+        });
+
+        // 支付方式分布图
+        const paymentMethodData = <%- JSON.stringify(stats.payment_methods || []) %>;
+        const paymentMethodCtx = document.getElementById('paymentMethodChart').getContext('2d');
+
+        new Chart(paymentMethodCtx, {
+            type: 'doughnut',
+            data: {
+                labels: paymentMethodData.map(item => {
+                    if (item.payment_method === 'usdt') return 'USDT';
+                    if (item.payment_method === 'alipay') return '支付宝';
+                    return item.payment_method;
+                }),
+                datasets: [{
+                    data: paymentMethodData.map(item => parseFloat(item.total_amount)),
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.8)',
+                        'rgba(54, 162, 235, 0.8)',
+                        'rgba(255, 205, 86, 0.8)',
+                        'rgba(75, 192, 192, 0.8)',
+                        'rgba(153, 102, 255, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 205, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return `${label}: ¥${value.toFixed(2)} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // 导出报表
+        function exportReport() {
+            const params = new URLSearchParams(window.location.search);
+            const dateFrom = params.get('date_from') || '';
+            const dateTo = params.get('date_to') || '';
+
+            const url = `/api/reports/export?date_from=${dateFrom}&date_to=${dateTo}`;
+            window.open(url, '_blank');
+        }
+
+        // 打印报表
+        function printReport() {
+            window.print();
+        }
+    </script>
+</body>
+</html>
