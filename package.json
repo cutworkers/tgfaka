@@ -1,0 +1,59 @@
+{
+  "name": "telegram-card-shop",
+  "version": "1.0.0",
+  "description": "Telegram Bot卡密销售系统",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
+    "test": "jest",
+    "db:init": "node src/database/init.js",
+    "db:seed": "node src/database/seed.js",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:ci": "jest --ci --coverage --watchAll=false",
+    "lint": "eslint src/ --ext .js",
+    "lint:fix": "eslint src/ --ext .js --fix",
+    "deploy": "chmod +x scripts/deploy.sh && ./scripts/deploy.sh",
+    "deploy:staging": "chmod +x scripts/deploy.sh && ./scripts/deploy.sh staging",
+    "deploy:production": "chmod +x scripts/deploy.sh && ./scripts/deploy.sh production",
+    "backup": "chmod +x scripts/backup.sh && ./scripts/backup.sh",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop telegram-shop",
+    "pm2:restart": "pm2 restart telegram-shop",
+    "pm2:logs": "pm2 logs telegram-shop"
+  },
+  "keywords": [
+    "telegram",
+    "bot",
+    "card",
+    "shop",
+    "payment"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.2",
+    "bcryptjs": "^2.4.3",
+    "csv-parser": "^3.2.0",
+    "dotenv": "^16.6.0",
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "express-session": "^1.18.1",
+    "moment": "^2.29.4",
+    "multer": "^1.4.5-lts.1",
+    "node-cron": "^3.0.3",
+    "sqlite3": "^5.1.7",
+    "telegraf": "^4.16.3",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "eslint": "^9.29.0",
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.10",
+    "supertest": "^6.3.4"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

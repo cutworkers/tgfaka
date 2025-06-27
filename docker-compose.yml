@@ -1,0 +1,147 @@
+version: '3.8'
+
+services:
+  # 主应用
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: telegram-shop-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_PATH=/app/database/production.db
+    volumes:
+      - ./database:/app/database
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
+    depends_on:
+      - redis
+    networks:
+      - telegram-shop-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Redis缓存
+  redis:
+    image: redis:7-alpine
+    container_name: telegram-shop-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - telegram-shop-network
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-defaultpassword}
+
+  # Nginx反向代理
+  nginx:
+    image: nginx:alpine
+    container_name: telegram-shop-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./ssl:/etc/nginx/ssl
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot
+    depends_on:
+      - app
+    networks:
+      - telegram-shop-network
+
+  # Let's Encrypt证书管理
+  certbot:
+    image: certbot/certbot
+    container_name: telegram-shop-certbot
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
+      - /var/www/certbot:/var/www/certbot
+    command: certonly --webroot --webroot-path=/var/www/certbot --email your-email@example.com --agree-tos --no-eff-email -d your-domain.com -d www.your-domain.com
+
+  # 监控 - Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: telegram-shop-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - telegram-shop-network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+
+  # 监控 - Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: telegram-shop-grafana
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    networks:
+      - telegram-shop-network
+
+  # 日志收集 - Filebeat
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.5.0
+    container_name: telegram-shop-filebeat
+    restart: unless-stopped
+    user: root
+    volumes:
+      - ./monitoring/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - ./logs:/app/logs:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - telegram-shop-network
+    depends_on:
+      - app
+
+  # 数据库备份
+  backup:
+    image: alpine:latest
+    container_name: telegram-shop-backup
+    restart: "no"
+    volumes:
+      - ./database:/app/database:ro
+      - ./backups:/app/backups
+      - ./scripts/backup.sh:/app/backup.sh:ro
+    command: /bin/sh /app/backup.sh
+    networks:
+      - telegram-shop-network
+
+volumes:
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  telegram-shop-network:
+    driver: bridge
