@@ -1,5 +1,6 @@
 const Card = require('../../database/models/Card');
 const Product = require('../../database/models/Product');
+const SystemConfig = require('../../database/models/SystemConfig');
 const logger = require('../../utils/logger');
 const { v4: uuidv4 } = require('uuid');
 
@@ -182,14 +183,24 @@ class CardController {
       }
 
       const batchIdToUse = batch_id || `BATCH_${Date.now()}_${uuidv4().substr(0, 8)}`;
-      
+
+      // 获取系统默认有效期设置
+      const defaultExpireHours = await SystemConfig.get('card_expire_hours', 24);
+      let defaultExpireAt = null;
+
+      if (defaultExpireHours > 0) {
+        const expireDate = new Date();
+        expireDate.setHours(expireDate.getHours() + defaultExpireHours);
+        defaultExpireAt = expireDate.toISOString();
+      }
+
       // 准备卡密数据
       const cardsData = cards.map(card => ({
         product_id,
         card_number: card.card_number,
         card_password: card.card_password,
         batch_id: batchIdToUse,
-        expire_at: card.expire_at || expire_at
+        expire_at: card.expire_at || expire_at || defaultExpireAt
       }));
 
       // 验证卡号唯一性

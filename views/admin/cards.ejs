@@ -140,7 +140,7 @@
                                 <i class="fas fa-plus me-1"></i>
                                 添加卡密
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#batchImportModal">
                                 <i class="fas fa-upload me-1"></i>
                                 批量导入
                             </button>
@@ -477,6 +477,69 @@
         </div>
     </div>
 
+    <!-- 批量导入模态框 -->
+    <div class="modal fade" id="batchImportModal" tabindex="-1" aria-labelledby="batchImportModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="batchImportModalLabel">
+                        <i class="fas fa-upload me-2"></i>
+                        批量导入卡密
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="batchImportForm">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="importProductId" class="form-label">选择商品 <span class="text-danger">*</span></label>
+                            <select class="form-select" id="importProductId" name="product_id" required>
+                                <option value="">请选择商品</option>
+                                <% if (products && products.length > 0) { %>
+                                    <% products.forEach(product => { %>
+                                        <option value="<%= product.id %>"><%= product.name %></option>
+                                    <% }); %>
+                                <% } %>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="importBatchId" class="form-label">批次ID</label>
+                            <input type="text" class="form-control" id="importBatchId" name="batch_id" placeholder="留空自动生成">
+                            <div class="form-text">建议使用有意义的批次名称，如：STEAM_20241228</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="cardsText" class="form-label">卡密数据 <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="cardsText" name="cards_text" rows="10" required
+                                placeholder="请按以下格式输入，每行一个卡密：&#10;【卡号#密码】&#10;&#10;示例：&#10;STEAM001#PASS001&#10;STEAM002#PASS002&#10;STEAM003#PASS003"></textarea>
+                            <div class="form-text">
+                                <strong>格式说明：</strong>每行一个卡密，格式为【卡号#密码】，系统将自动使用默认有效期
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>注意事项：</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>每行必须严格按照【卡号#密码】格式输入</li>
+                                <li>卡号和密码长度应在6-50字符之间</li>
+                                <li>系统会自动检查卡号重复</li>
+                                <li>导入的卡密将使用系统默认有效期设置</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-upload me-1"></i>
+                            开始导入
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -768,6 +831,148 @@
                 });
             }
         }
+
+        // 解析卡密文本
+        function parseCardsText(text) {
+            const lines = text.trim().split('\n');
+            const cards = [];
+            const errors = [];
+
+            lines.forEach((line, index) => {
+                const lineNum = index + 1;
+                const trimmedLine = line.trim();
+
+                if (!trimmedLine) return; // 跳过空行
+
+                // 检查格式：卡号#密码
+                const match = trimmedLine.match(/^(.+?)#(.+?)$/);
+                if (!match) {
+                    errors.push(`第${lineNum}行格式错误：${trimmedLine}`);
+                    return;
+                }
+
+                const cardNumber = match[1].trim();
+                const cardPassword = match[2].trim();
+
+                // 验证卡号和密码
+                if (!cardNumber || !cardPassword) {
+                    errors.push(`第${lineNum}行：卡号或密码不能为空`);
+                    return;
+                }
+
+                if (cardNumber.length < 6 || cardNumber.length > 50) {
+                    errors.push(`第${lineNum}行：卡号长度应在6-50字符之间`);
+                    return;
+                }
+
+                if (cardPassword.length < 6 || cardPassword.length > 50) {
+                    errors.push(`第${lineNum}行：密码长度应在6-50字符之间`);
+                    return;
+                }
+
+                // 检查重复
+                const duplicate = cards.find(card => card.card_number === cardNumber);
+                if (duplicate) {
+                    errors.push(`第${lineNum}行：卡号重复 - ${cardNumber}`);
+                    return;
+                }
+
+                cards.push({
+                    card_number: cardNumber,
+                    card_password: cardPassword
+                });
+            });
+
+            return { cards, errors };
+        }
+
+        // 批量导入表单提交
+        document.getElementById('batchImportForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = showLoading(submitBtn);
+
+            const formData = new FormData(this);
+            const productId = formData.get('product_id');
+            const batchId = formData.get('batch_id');
+            const cardsText = formData.get('cards_text');
+
+            // 验证必填字段
+            if (!productId) {
+                hideLoading(submitBtn, originalText);
+                showToast('请选择商品', 'warning');
+                return;
+            }
+
+            if (!cardsText.trim()) {
+                hideLoading(submitBtn, originalText);
+                showToast('请输入卡密数据', 'warning');
+                return;
+            }
+
+            // 解析卡密文本
+            const parseResult = parseCardsText(cardsText);
+
+            if (parseResult.errors.length > 0) {
+                hideLoading(submitBtn, originalText);
+                showToast('格式错误：\n' + parseResult.errors.slice(0, 5).join('\n') +
+                         (parseResult.errors.length > 5 ? '\n...' : ''), 'danger');
+                return;
+            }
+
+            if (parseResult.cards.length === 0) {
+                hideLoading(submitBtn, originalText);
+                showToast('没有找到有效的卡密数据', 'warning');
+                return;
+            }
+
+            // 确认导入
+            if (!confirm(`确定要导入 ${parseResult.cards.length} 张卡密吗？`)) {
+                hideLoading(submitBtn, originalText);
+                return;
+            }
+
+            // 准备API请求数据
+            const requestData = {
+                product_id: parseInt(productId),
+                cards: parseResult.cards
+            };
+
+            if (batchId && batchId.trim()) {
+                requestData.batch_id = batchId.trim();
+            }
+
+            // 调用批量创建API
+            fetch('/api/cards/batch', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(result => {
+                hideLoading(submitBtn, originalText);
+                if (result.success) {
+                    showToast(`成功导入 ${result.data.count} 张卡密！`, 'success');
+
+                    // 关闭模态框并重置表单
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('batchImportModal'));
+                    modal.hide();
+                    this.reset();
+
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showToast('导入失败：' + result.message, 'danger');
+                }
+            })
+            .catch(error => {
+                hideLoading(submitBtn, originalText);
+                console.error('Error:', error);
+                showToast('导入失败，请重试', 'danger');
+            });
+        });
     </script>
 </body>
 </html>
