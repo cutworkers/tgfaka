@@ -10,13 +10,19 @@ const MessageService = require('./services/messageService');
 
 class BotService {
   constructor() {
-    if (!config.bot.token || config.bot.token === 'your_telegram_bot_token_here') {
+    if (!config.bot.token) {
       logger.warn('Bot token未配置，Bot服务将不会启动');
       this.bot = null;
       return;
     }
-
-    this.bot = new Telegraf(config.bot.token);
+    if (config.bot.proxy === 'none') {
+      this.bot = new Telegraf(config.bot.token);
+    } else {
+      const { SocksProxyAgent } = require('socks-proxy-agent');
+      const agent = new SocksProxyAgent(config.bot.proxy);
+      this.bot = new Telegraf(config.bot.token,{ telegram: { agent } });
+    }
+    
     this.userService = new UserService();
     this.productService = new ProductService();
     this.orderService = new OrderService();

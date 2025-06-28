@@ -21,6 +21,9 @@ pids/
 *.seed
 *.pid.lock
 
+# issues
+issues/
+
 # Coverage directory used by tools like istanbul
 coverage/
 

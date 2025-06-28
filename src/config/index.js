@@ -3,8 +3,9 @@ require('dotenv').config();
 module.exports = {
   // Telegram Bot配置
   bot: {
-    token: process.env.BOT_TOKEN,
+    token: process.env.BOT_TOKEN || '6994463253:AAE2OSWs05pyt7VxRz1Ujk4Wh5qWgndgvF0',
     webhookUrl: process.env.BOT_WEBHOOK_URL,
+    proxy: process.env.BOT_PROXY || 'none',
   },
 
   // 数据库配置
