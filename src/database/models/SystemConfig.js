@@ -175,7 +175,7 @@ class SystemConfig {
       case 'number':
         return parseFloat(this.config_value);
       case 'boolean':
-        return this.config_value.toLowerCase() === 'true';
+        return this.config_value.toLowerCase() === '1';
       case 'json':
         try {
           return JSON.parse(this.config_value);
