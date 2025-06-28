@@ -276,10 +276,12 @@
                                 <div class="mb-3">
                                     <label for="productCategory" class="form-label">商品分类</label>
                                     <select class="form-select" id="productCategory" name="category_id">
-                                        <option value="">选择分类</option>
-                                        <option value="1">游戏充值</option>
-                                        <option value="2">软件激活</option>
-                                        <option value="3">会员服务</option>
+                                        <option value="">请选择分类</option>
+                                        <% if (categories && categories.length > 0) { %>
+                                            <% categories.forEach(category => { %>
+                                                <option value="<%= category.id %>"><%= category.name %></option>
+                                            <% }); %>
+                                        <% } %>
                                     </select>
                                 </div>
                             </div>
