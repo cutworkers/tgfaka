@@ -4,6 +4,7 @@ const Product = require('../../database/models/Product');
 const Order = require('../../database/models/Order');
 const Card = require('../../database/models/Card');
 const User = require('../../database/models/User');
+const Category = require('../../database/models/Category');
 const logger = require('../../utils/logger');
 const config = require('../../config');
 
@@ -217,6 +218,9 @@ class AdminController {
         })
       );
 
+      // 获取分类列表
+      const categories = await Category.getActiveCategories();
+
       // 获取总数
       const allProducts = await Product.findAll();
       const total = allProducts.length;
@@ -226,6 +230,7 @@ class AdminController {
         title: '商品管理',
         admin: req.session.admin,
         products: productsWithStock,
+        categories,
         currentPage: 'products',
         pagination: {
           page,
@@ -493,6 +498,20 @@ class AdminController {
     } catch (error) {
       logger.error('获取报表统计失败', { error: error.message });
       return {};
+    }
+  }
+
+  // 系统设置页面
+  static async settings(req, res) {
+    try {
+      res.render('admin/settings', {
+        title: '系统设置',
+        admin: req.session.admin,
+        currentPage: 'settings'
+      });
+    } catch (error) {
+      logger.error('显示系统设置页面失败', { error: error.message });
+      res.status(500).send('服务器错误');
     }
   }
 }

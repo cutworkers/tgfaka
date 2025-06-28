@@ -12,6 +12,7 @@ class Card {
     this.expire_at = data.expire_at;
     this.created_at = data.created_at;
     this.updated_at = data.updated_at;
+    this.product_name = data.product_name; // 添加商品名称字段
   }
 
   // 根据ID查找卡密

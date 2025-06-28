@@ -30,6 +30,7 @@ router.get('/admin/products', requireAuth, AdminController.products);
 router.get('/admin/orders', requireAuth, AdminController.orders);
 router.get('/admin/users', requireAuth, AdminController.users);
 router.get('/admin/cards', requireAuth, AdminController.cards);
+router.get('/admin/settings', requireAuth, AdminController.settings);
 router.get('/admin/reports', requireAuth, AdminController.reports);
 
 module.exports = router;

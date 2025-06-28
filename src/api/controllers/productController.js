@@ -255,7 +255,7 @@ class ProductController {
         success: true,
         data: {
           product: product.toJSON(),
-          cards: cards.map(card => card.toSafeJSON()),
+          cards: cards.map(card => card.toJSON()), // 管理后台显示完整卡密信息
           pagination: {
             page: parseInt(page),
             limit: parseInt(limit),

@@ -10,6 +10,7 @@ const apiRoutes = require('./api/routes');
 const botService = require('./bot');
 const databaseService = require('./database');
 const Scheduler = require('./services/scheduler');
+const { siteConfigMiddleware, initializeCache } = require('./middleware/siteConfig');
 
 class App {
   constructor() {
@@ -23,6 +24,9 @@ class App {
       // 初始化数据库
       await databaseService.init();
       logger.info('数据库初始化完成');
+
+      // 初始化站点配置缓存
+      await initializeCache();
 
       // 配置Express
       this.configureExpress();
@@ -72,9 +76,12 @@ class App {
       }
     }));
 
+    // 站点配置中间件
+    this.app.use(siteConfigMiddleware);
+
     // 请求日志
     this.app.use((req, res, next) => {
-      logger.info(`${req.method} ${req.url}`, { 
+      logger.info(`${req.method} ${req.url}`, {
         ip: req.ip,
         userAgent: req.get('User-Agent')
       });

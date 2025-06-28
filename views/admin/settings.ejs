@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - <%= siteName %></title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            border-radius: 8px;
+            margin: 2px 0;
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+        
+        .main-content {
+            background-color: #f8f9fa;
+            min-height: 100vh;
+        }
+        
+        .config-card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease;
+        }
+        
+        .config-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .config-item {
+            border-bottom: 1px solid #eee;
+            padding: 1rem 0;
+        }
+        
+        .config-item:last-child {
+            border-bottom: none;
+        }
+        
+        .config-label {
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .config-description {
+            font-size: 0.875rem;
+            color: #6c757d;
+            margin-top: 0.25rem;
+        }
+        
+        .config-value {
+            margin-top: 0.5rem;
+        }
+        
+        .save-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+        }
+        
+        .category-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px 8px 0 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- 侧边栏 -->
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <div class="text-center mb-4">
+                        <h5 class="text-white">
+                            <i class="fas fa-robot me-2"></i>
+                            管理后台
+                        </h5>
+                    </div>
+                    
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link <%= currentPage === 'dashboard' ? 'active' : '' %>" href="/admin/dashboard">
+                                <i class="fas fa-tachometer-alt me-2"></i>
+                                仪表板
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <%= currentPage === 'products' ? 'active' : '' %>" href="/admin/products">
+                                <i class="fas fa-box me-2"></i>
+                                商品管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <%= currentPage === 'orders' ? 'active' : '' %>" href="/admin/orders">
+                                <i class="fas fa-shopping-cart me-2"></i>
+                                订单管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <%= currentPage === 'cards' ? 'active' : '' %>" href="/admin/cards">
+                                <i class="fas fa-credit-card me-2"></i>
+                                卡密管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <%= currentPage === 'users' ? 'active' : '' %>" href="/admin/users">
+                                <i class="fas fa-users me-2"></i>
+                                用户管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <%= currentPage === 'settings' ? 'active' : '' %>" href="/admin/settings">
+                                <i class="fas fa-cog me-2"></i>
+                                系统设置
+                            </a>
+                        </li>
+                        <li class="nav-item mt-3">
+                            <a class="nav-link" href="/admin/logout">
+                                <i class="fas fa-sign-out-alt me-2"></i>
+                                退出登录
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- 主内容区 -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">
+                        <i class="fas fa-cog me-2"></i>
+                        系统设置
+                    </h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <div class="btn-group me-2">
+                            <button type="button" class="btn btn-sm btn-primary" onclick="saveAllConfigs()">
+                                <i class="fas fa-save me-1"></i>
+                                保存所有设置
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="resetConfigs()">
+                                <i class="fas fa-undo me-1"></i>
+                                重置
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-warning" onclick="clearCache()">
+                                <i class="fas fa-trash me-1"></i>
+                                清除缓存
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 加载状态 -->
+                <div id="loadingSpinner" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">加载中...</span>
+                    </div>
+                    <p class="mt-2 text-muted">正在加载系统配置...</p>
+                </div>
+
+                <!-- 配置内容 -->
+                <div id="configContent" style="display: none;">
+                    <div class="row" id="configCategories">
+                        <!-- 配置分类将通过JavaScript动态生成 -->
+                    </div>
+                </div>
+
+                <!-- 空状态 -->
+                <div id="emptyState" class="text-center py-5" style="display: none;">
+                    <i class="fas fa-cog fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">暂无系统配置</p>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- 保存状态提示 -->
+    <div id="saveIndicator" class="save-indicator" style="display: none;">
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>
+            <span id="saveMessage">配置保存成功！</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        let configData = {};
+        let originalData = {};
+
+        // 页面加载时获取配置
+        document.addEventListener('DOMContentLoaded', function() {
+            loadConfigs();
+        });
+
+        // 加载配置数据
+        function loadConfigs() {
+            document.getElementById('loadingSpinner').style.display = 'block';
+            document.getElementById('configContent').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'none';
+
+            fetch('/api/system/config')
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        configData = result.data.categorized;
+                        originalData = JSON.parse(JSON.stringify(configData));
+                        renderConfigs();
+                    } else {
+                        showError('加载配置失败: ' + result.message);
+                    }
+                })
+                .catch(error => {
+                    showError('加载配置失败: ' + error.message);
+                })
+                .finally(() => {
+                    document.getElementById('loadingSpinner').style.display = 'none';
+                });
+        }
+
+        // 渲染配置界面
+        function renderConfigs() {
+            const container = document.getElementById('configCategories');
+            container.innerHTML = '';
+
+            const hasConfigs = Object.values(configData).some(category => category.configs.length > 0);
+            
+            if (!hasConfigs) {
+                document.getElementById('emptyState').style.display = 'block';
+                return;
+            }
+
+            document.getElementById('configContent').style.display = 'block';
+
+            Object.entries(configData).forEach(([categoryKey, category]) => {
+                if (category.configs.length === 0) return;
+
+                const categoryHtml = createCategoryHtml(categoryKey, category);
+                container.insertAdjacentHTML('beforeend', categoryHtml);
+            });
+
+            // 绑定事件
+            bindConfigEvents();
+        }
+
+        // 创建分类HTML
+        function createCategoryHtml(categoryKey, category) {
+            const configItems = category.configs.map(config => createConfigItemHtml(config)).join('');
+            
+            return `
+                <div class="col-lg-6 mb-4">
+                    <div class="card config-card">
+                        <div class="card-header category-header">
+                            <h6 class="mb-0">
+                                <i class="${category.icon} me-2"></i>
+                                ${category.name}
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            ${configItems}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 创建配置项HTML
+        function createConfigItemHtml(config) {
+            const inputHtml = createInputHtml(config);
+            
+            return `
+                <div class="config-item" data-key="${config.config_key}">
+                    <div class="config-label">${config.description || config.config_key}</div>
+                    <div class="config-description">
+                        <small>键名: ${config.config_key} | 类型: ${config.config_type}</small>
+                    </div>
+                    <div class="config-value">
+                        ${inputHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        // 创建输入控件HTML
+        function createInputHtml(config) {
+            const value = config.parsed_value !== null ? config.parsed_value : config.config_value;
+            
+            switch (config.config_type) {
+                case 'boolean':
+                    return `
+                        <div class="form-check form-switch">
+                            <input class="form-check-input config-input" type="checkbox" 
+                                   id="config_${config.config_key}" 
+                                   data-key="${config.config_key}"
+                                   data-type="${config.config_type}"
+                                   ${value ? 'checked' : ''}>
+                            <label class="form-check-label" for="config_${config.config_key}">
+                                ${value ? '启用' : '禁用'}
+                            </label>
+                        </div>
+                    `;
+                case 'number':
+                    return `
+                        <input type="number" class="form-control config-input" 
+                               id="config_${config.config_key}"
+                               data-key="${config.config_key}"
+                               data-type="${config.config_type}"
+                               value="${value || ''}"
+                               step="0.01">
+                    `;
+                case 'json':
+                    return `
+                        <textarea class="form-control config-input" 
+                                  id="config_${config.config_key}"
+                                  data-key="${config.config_key}"
+                                  data-type="${config.config_type}"
+                                  rows="3">${JSON.stringify(value, null, 2)}</textarea>
+                    `;
+                case 'string':
+                default:
+                    return `
+                        <input type="text" class="form-control config-input" 
+                               id="config_${config.config_key}"
+                               data-key="${config.config_key}"
+                               data-type="${config.config_type}"
+                               value="${value || ''}">
+                    `;
+            }
+        }
+
+        // 绑定配置事件
+        function bindConfigEvents() {
+            document.querySelectorAll('.config-input').forEach(input => {
+                input.addEventListener('change', function() {
+                    const key = this.dataset.key;
+                    const type = this.dataset.type;
+                    let value;
+
+                    if (type === 'boolean') {
+                        value = this.checked;
+                        const label = this.nextElementSibling;
+                        label.textContent = value ? '启用' : '禁用';
+                    } else if (type === 'number') {
+                        value = parseFloat(this.value) || 0;
+                    } else if (type === 'json') {
+                        try {
+                            value = JSON.parse(this.value);
+                        } catch (e) {
+                            showError('JSON格式错误');
+                            return;
+                        }
+                    } else {
+                        value = this.value;
+                    }
+
+                    // 自动保存
+                    saveConfig(key, value, type);
+                });
+            });
+        }
+
+        // 保存单个配置
+        function saveConfig(key, value, type) {
+            fetch(`/api/system/config/${key}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ value, type })
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    showSuccess(`配置 ${key} 保存成功`);
+                } else {
+                    showError('保存失败: ' + result.message);
+                }
+            })
+            .catch(error => {
+                showError('保存失败: ' + error.message);
+            });
+        }
+
+        // 保存所有配置
+        function saveAllConfigs() {
+            const configs = [];
+            
+            document.querySelectorAll('.config-input').forEach(input => {
+                const key = input.dataset.key;
+                const type = input.dataset.type;
+                let value;
+
+                if (type === 'boolean') {
+                    value = input.checked;
+                } else if (type === 'number') {
+                    value = parseFloat(input.value) || 0;
+                } else if (type === 'json') {
+                    try {
+                        value = JSON.parse(input.value);
+                    } catch (e) {
+                        showError(`配置 ${key} 的JSON格式错误`);
+                        return;
+                    }
+                } else {
+                    value = input.value;
+                }
+
+                configs.push({ key, value, type });
+            });
+
+            fetch('/api/system/config/batch', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ configs })
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    showSuccess('所有配置保存成功！');
+                } else {
+                    showError('批量保存失败: ' + result.message);
+                }
+            })
+            .catch(error => {
+                showError('批量保存失败: ' + error.message);
+            });
+        }
+
+        // 重置配置
+        function resetConfigs() {
+            if (confirm('确定要重置所有配置吗？这将恢复到页面加载时的状态。')) {
+                configData = JSON.parse(JSON.stringify(originalData));
+                renderConfigs();
+                showSuccess('配置已重置');
+            }
+        }
+
+        // 清除缓存
+        function clearCache() {
+            if (confirm('确定要清除配置缓存吗？')) {
+                fetch('/api/system/config/cache/clear', {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        showSuccess('缓存清除成功！');
+                    } else {
+                        showError('清除缓存失败: ' + result.message);
+                    }
+                })
+                .catch(error => {
+                    showError('清除缓存失败: ' + error.message);
+                });
+            }
+        }
+
+        // 显示成功消息
+        function showSuccess(message) {
+            showMessage(message, 'success');
+        }
+
+        // 显示错误消息
+        function showError(message) {
+            showMessage(message, 'danger');
+        }
+
+        // 显示消息
+        function showMessage(message, type) {
+            const indicator = document.getElementById('saveIndicator');
+            const messageEl = document.getElementById('saveMessage');
+            const alertEl = indicator.querySelector('.alert');
+            
+            alertEl.className = `alert alert-${type} alert-dismissible fade show`;
+            messageEl.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>${message}`;
+            
+            indicator.style.display = 'block';
+            
+            setTimeout(() => {
+                indicator.style.display = 'none';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

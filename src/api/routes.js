@@ -7,6 +7,7 @@ const ProductController = require('./controllers/productController');
 const OrderController = require('./controllers/orderController');
 const ImportController = require('./controllers/importController');
 const PaymentController = require('./controllers/paymentController');
+const SystemConfigController = require('./controllers/systemConfigController');
 
 // 导入中间件
 const { requestLogger, errorHandler, rateLimiter } = require('../middleware/auth');
@@ -113,6 +114,15 @@ router.get('/docs', (req, res) => {
     }
   });
 });
+
+// 系统配置相关路由
+router.get('/system/config', SystemConfigController.getConfigs);
+router.get('/system/config/:key', SystemConfigController.getConfig);
+router.post('/system/config', SystemConfigController.createConfig);
+router.put('/system/config/:key', SystemConfigController.updateConfig);
+router.post('/system/config/batch', SystemConfigController.batchUpdateConfigs);
+router.delete('/system/config/:key', SystemConfigController.deleteConfig);
+router.post('/system/config/cache/clear', SystemConfigController.clearCache);
 
 // 健康检查
 router.get('/health', (req, res) => {
