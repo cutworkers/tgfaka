@@ -30,7 +30,27 @@ const apiKeyAuth = (req, res, next) => {
 
 // 管理员认证中间件
 const adminAuth = (req, res, next) => {
+  // 调试session信息
+  logger.debug('管理员认证检查', {
+    url: req.url,
+    method: req.method,
+    hasSession: !!req.session,
+    sessionId: req.session?.id,
+    hasAdmin: !!req.session?.admin,
+    adminId: req.session?.admin?.id,
+    cookies: req.headers.cookie ? 'present' : 'missing',
+    userAgent: req.get('User-Agent')
+  });
+
   if (!req.session || !req.session.admin) {
+    logger.warn('管理员认证失败', {
+      url: req.url,
+      ip: req.ip,
+      hasSession: !!req.session,
+      sessionKeys: req.session ? Object.keys(req.session) : [],
+      reason: !req.session ? 'no_session' : 'no_admin_in_session'
+    });
+
     return res.status(401).json({
       success: false,
       message: '需要管理员权限'

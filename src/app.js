@@ -12,6 +12,7 @@ const databaseService = require('./database');
 const Scheduler = require('./services/scheduler');
 const { siteConfigMiddleware, initializeCache } = require('./middleware/siteConfig');
 const errorMonitoringTask = require('./services/ErrorMonitoringTask');
+const SessionDiagnostic = require('./utils/SessionDiagnostic');
 
 class App {
   constructor() {
@@ -71,15 +72,32 @@ class App {
     this.app.use(express.static(path.join(__dirname, '../public')));
 
     // Session配置
-    this.app.use(session({
+    // 智能session配置
+    const sessionConfig = {
       secret: config.server.sessionSecret,
       resave: false,
       saveUninitialized: false,
-      cookie: { 
-        secure: config.system.nodeEnv === 'production',
-        maxAge: 24 * 60 * 60 * 1000 // 24小时
+      name: 'telegram-shop-session', // 自定义session名称
+      cookie: {
+        secure: false, // 默认false，支持HTTP和HTTPS
+        httpOnly: true, // 防止XSS攻击
+        maxAge: 24 * 60 * 60 * 1000, // 24小时
+        sameSite: 'lax' // CSRF保护
       }
-    }));
+    };
+
+    // 如果明确配置了HTTPS，则启用secure
+    if (process.env.FORCE_HTTPS === 'true') {
+      sessionConfig.cookie.secure = true;
+    }
+
+    this.app.use(session(sessionConfig));
+
+    // Session诊断中间件（仅在开发和调试时启用）
+    if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_SESSION === 'true') {
+      this.app.use(SessionDiagnostic.diagnoseSession);
+    }
+    this.app.use(SessionDiagnostic.adminSessionDiagnostic);
 
     // 站点配置中间件
     this.app.use(siteConfigMiddleware);
@@ -95,9 +113,26 @@ class App {
   }
 
   configureRoutes() {
+    // Session测试路由（仅用于调试）
+    if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_SESSION === 'true') {
+      this.app.get('/debug/session', (req, res) => {
+        const report = SessionDiagnostic.generateHealthReport(req);
+        res.json({
+          session: req.session,
+          health: report,
+          cookies: req.headers.cookie,
+          headers: {
+            host: req.get('Host'),
+            protocol: req.protocol,
+            secure: req.secure
+          }
+        });
+      });
+    }
+
     // API路由
     this.app.use('/api', apiRoutes);
-    
+
     // Web管理后台路由
     this.app.use('/', webRoutes);
 

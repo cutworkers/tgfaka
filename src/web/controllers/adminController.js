@@ -60,13 +60,27 @@ class AdminController {
         permissions: JSON.parse(admin.permissions || '[]')
       };
 
-      logger.info('管理员登录成功', { 
-        adminId: admin.id, 
-        username: admin.username,
-        ip: req.ip 
-      });
+      // 强制保存session并等待完成
+      req.session.save((err) => {
+        if (err) {
+          logger.error('Session保存失败', {
+            error: err.message,
+            adminId: admin.id,
+            sessionId: req.session.id
+          });
+          return res.redirect('/admin/login?error=登录失败，请重试');
+        }
 
-      res.redirect('/admin/dashboard');
+        logger.info('管理员登录成功', {
+          adminId: admin.id,
+          username: admin.username,
+          ip: req.ip,
+          sessionId: req.session.id,
+          hasSessionAdmin: !!req.session.admin
+        });
+
+        res.redirect('/admin/dashboard');
+      });
     } catch (error) {
       logger.error('管理员登录失败', { error: error.message });
       res.redirect('/admin/login?error=登录失败，请重试');
