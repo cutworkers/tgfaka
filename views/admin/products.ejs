@@ -221,8 +221,8 @@
                                                                 <i class="fas fa-credit-card"></i>
                                                             </button>
                                                         <% } else { %>
-                                                            <button type="button" class="btn btn-outline-success" title="查看POST配置" onclick="viewPostConfig(<%= product.id %>, '<%= product.name %>')">
-                                                                <i class="fas fa-api"></i>
+                                                            <button type="button" class="btn btn-outline-success" title="查看配置" onclick="viewPostConfig(<%= product.id %>, '<%= product.name %>')">
+                                                                <i class="fas fa-credit-card"></i>
                                                             </button>
                                                         <% } %>
                                                         <button type="button" class="btn btn-outline-danger" title="删除" onclick="deleteProduct(<%= product.id %>, '<%= product.name %>')">
@@ -692,7 +692,7 @@
 
         function submitProduct() {
             const form = document.getElementById('addProductForm');
-            const submitBtn = form.querySelector('button[onclick="submitProduct()"]');
+            const submitBtn = document.querySelector('button[onclick="submitProduct()"]');
             const originalText = showLoading(submitBtn);
 
             const formData = new FormData(form);
@@ -769,7 +769,7 @@
         // 更新商品
         function updateProduct() {
             const form = document.getElementById('editProductForm');
-            const submitBtn = form.querySelector('button[onclick="updateProduct()"]');
+            const submitBtn = document.querySelector('button[onclick="updateProduct()"]');
             const originalText = showLoading(submitBtn);
 
             const formData = new FormData(form);
