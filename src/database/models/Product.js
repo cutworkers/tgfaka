@@ -12,6 +12,8 @@ class Product {
     this.sold_count = data.sold_count || 0;
     this.min_stock_alert = data.min_stock_alert || 10;
     this.image_url = data.image_url;
+    this.type = data.type || 'card';
+    this.post_data = data.post_data;
     this.status = data.status || 'active';
     this.sort_order = data.sort_order || 0;
     this.created_at = data.created_at;
@@ -74,9 +76,10 @@ class Product {
   // 创建新商品
   static async create(productData) {
     const result = await databaseService.run(
-      `INSERT INTO products (category_id, name, description, price, original_price, 
-                           stock_count, min_stock_alert, image_url, status, sort_order)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO products (category_id, name, description, price, original_price,
+                           stock_count, min_stock_alert, image_url, type, post_data,
+                           status, sort_order)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         productData.category_id,
         productData.name,
@@ -86,11 +89,13 @@ class Product {
         productData.stock_count || 0,
         productData.min_stock_alert || 10,
         productData.image_url,
+        productData.type || 'card',
+        productData.post_data,
         productData.status || 'active',
         productData.sort_order || 0
       ]
     );
-    
+
     return await Product.findById(result.id);
   }
 
@@ -217,6 +222,8 @@ class Product {
       sold_count: this.sold_count,
       min_stock_alert: this.min_stock_alert,
       image_url: this.image_url,
+      type: this.type,
+      post_data: this.post_data,
       status: this.status,
       sort_order: this.sort_order,
       created_at: this.created_at,

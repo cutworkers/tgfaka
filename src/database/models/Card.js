@@ -233,16 +233,33 @@ class Card {
       'SELECT COUNT(*) as count FROM cards WHERE batch_id = ? AND status = "sold"',
       [batchId]
     );
-    
+
     if (soldCount.count > 0) {
       throw new Error('批次中包含已售出的卡密，无法删除');
     }
-    
+
     const result = await databaseService.run(
       'DELETE FROM cards WHERE batch_id = ?',
       [batchId]
     );
-    
+
+    return result.changes;
+  }
+
+  // 批量标记卡密为已售
+  static async markAsSold(cardIds) {
+    if (!Array.isArray(cardIds) || cardIds.length === 0) {
+      return 0;
+    }
+
+    const placeholders = cardIds.map(() => '?').join(',');
+    const result = await databaseService.run(
+      `UPDATE cards
+       SET status = 'sold', sold_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+       WHERE id IN (${placeholders}) AND status = 'available'`,
+      cardIds
+    );
+
     return result.changes;
   }
 

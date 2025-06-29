@@ -1,6 +1,8 @@
 const Product = require('../../database/models/Product');
 const Card = require('../../database/models/Card');
 const logger = require('../../utils/logger');
+const OperationLogService = require('../../services/OperationLogService');
+const ErrorLogger = require('../../utils/ErrorLogger');
 
 class ProductController {
   // 获取商品列表
@@ -109,6 +111,8 @@ class ProductController {
         original_price,
         min_stock_alert,
         image_url,
+        type,
+        post_data,
         sort_order
       } = req.body;
 
@@ -120,6 +124,34 @@ class ProductController {
         });
       }
 
+      // 验证商品类型
+      if (type && !['card', 'post'].includes(type)) {
+        return res.status(400).json({
+          success: false,
+          message: '商品类型只能是card或post'
+        });
+      }
+
+      // 验证POST类型商品的POST数据
+      if (type === 'post' && !post_data) {
+        return res.status(400).json({
+          success: false,
+          message: 'POST类型商品必须提供POST数据'
+        });
+      }
+
+      // 验证POST数据格式
+      if (type === 'post' && post_data) {
+        try {
+          JSON.parse(post_data);
+        } catch (error) {
+          return res.status(400).json({
+            success: false,
+            message: 'POST数据必须是有效的JSON格式'
+          });
+        }
+      }
+
       const productData = {
         category_id,
         name,
@@ -128,12 +160,26 @@ class ProductController {
         original_price: original_price ? parseFloat(original_price) : null,
         min_stock_alert: min_stock_alert || 10,
         image_url,
+        type: type || 'card',
+        post_data: type === 'post' ? post_data : null,
         sort_order: sort_order || 0
       };
 
       const product = await Product.create(productData);
 
-      logger.info('创建商品成功', { productId: product.id, name });
+      logger.info('创建商品成功', { productId: product.id, name, type: product.type });
+
+      // 记录操作日志
+      try {
+        await OperationLogService.logProductOperation('create', product, {
+          user_type: 'admin',
+          user_id: req.user?.id,
+          ip_address: req.ip,
+          user_agent: req.get('User-Agent')
+        });
+      } catch (logError) {
+        logger.warn('操作日志记录失败', { error: logError.message });
+      }
 
       res.status(201).json({
         success: true,
@@ -143,6 +189,18 @@ class ProductController {
 
     } catch (error) {
       logger.error('创建商品失败', { error: error.message });
+
+      // 记录详细错误日志
+      await ErrorLogger.logProductError(error, req.body, 'create', {
+        type: 'admin',
+        id: req.user?.id
+      }, {
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+        path: req.path,
+        method: req.method
+      });
+
       res.status(500).json({
         success: false,
         message: '创建商品失败',
@@ -165,6 +223,34 @@ class ProductController {
         });
       }
 
+      // 验证商品类型
+      if (updateData.type && !['card', 'post'].includes(updateData.type)) {
+        return res.status(400).json({
+          success: false,
+          message: '商品类型只能是card或post'
+        });
+      }
+
+      // 验证POST类型商品的POST数据
+      if (updateData.type === 'post' && !updateData.post_data) {
+        return res.status(400).json({
+          success: false,
+          message: 'POST类型商品必须提供POST数据'
+        });
+      }
+
+      // 验证POST数据格式
+      if (updateData.post_data) {
+        try {
+          JSON.parse(updateData.post_data);
+        } catch (error) {
+          return res.status(400).json({
+            success: false,
+            message: 'POST数据必须是有效的JSON格式'
+          });
+        }
+      }
+
       // 处理价格字段
       if (updateData.price) {
         updateData.price = parseFloat(updateData.price);
@@ -173,9 +259,30 @@ class ProductController {
         updateData.original_price = parseFloat(updateData.original_price);
       }
 
+      // 如果类型改为card，清空post_data
+      if (updateData.type === 'card') {
+        updateData.post_data = null;
+      }
+
       const updatedProduct = await product.update(updateData);
 
-      logger.info('更新商品成功', { productId: id });
+      logger.info('更新商品成功', { productId: id, type: updatedProduct.type });
+
+      // 记录操作日志
+      try {
+        await OperationLogService.logProductOperation('update', updatedProduct, {
+          user_type: 'admin',
+          user_id: req.user?.id,
+          ip_address: req.ip,
+          user_agent: req.get('User-Agent')
+        }, {
+          updatedFields: Object.keys(updateData),
+          originalType: product.type,
+          newType: updatedProduct.type
+        });
+      } catch (logError) {
+        logger.warn('操作日志记录失败', { error: logError.message });
+      }
 
       res.json({
         success: true,

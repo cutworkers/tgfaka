@@ -11,6 +11,7 @@ const botService = require('./bot');
 const databaseService = require('./database');
 const Scheduler = require('./services/scheduler');
 const { siteConfigMiddleware, initializeCache } = require('./middleware/siteConfig');
+const errorMonitoringTask = require('./services/ErrorMonitoringTask');
 
 class App {
   constructor() {
@@ -48,6 +49,10 @@ class App {
       // 启动定时任务
       this.scheduler.start();
       logger.info('定时任务启动完成');
+
+      // 启动错误监控任务
+      errorMonitoringTask.start();
+      logger.info('错误监控任务启动完成');
 
     } catch (error) {
       logger.error('应用启动失败', { error: error.message });

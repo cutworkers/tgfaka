@@ -146,6 +146,7 @@
                                         <th>ID</th>
                                         <th>商品名称</th>
                                         <th>分类</th>
+                                        <th>类型</th>
                                         <th>价格</th>
                                         <th>库存</th>
                                         <th>已售</th>
@@ -178,6 +179,17 @@
                                                 </td>
                                                 <td><%= product.category_name || '未分类' %></td>
                                                 <td>
+                                                    <% if (product.type === 'post') { %>
+                                                        <span class="badge bg-info">
+                                                            <i class="fas fa-api me-1"></i>POST
+                                                        </span>
+                                                    <% } else { %>
+                                                        <span class="badge bg-primary">
+                                                            <i class="fas fa-credit-card me-1"></i>卡密
+                                                        </span>
+                                                    <% } %>
+                                                </td>
+                                                <td>
                                                     <strong>¥<%= parseFloat(product.price).toFixed(2) %></strong>
                                                     <% if (product.original_price && product.original_price > product.price) { %>
                                                         <br><small class="text-muted text-decoration-line-through">¥<%= parseFloat(product.original_price).toFixed(2) %></small>
@@ -204,9 +216,15 @@
                                                         <button type="button" class="btn btn-outline-primary" title="编辑" onclick="editProduct(<%= product.id %>)">
                                                             <i class="fas fa-edit"></i>
                                                         </button>
-                                                        <button type="button" class="btn btn-outline-info" title="查看卡密" onclick="viewProductCards(<%= product.id %>, '<%= product.name %>')">
-                                                            <i class="fas fa-credit-card"></i>
-                                                        </button>
+                                                        <% if (product.type !== 'post') { %>
+                                                            <button type="button" class="btn btn-outline-info" title="查看卡密" onclick="viewProductCards(<%= product.id %>, '<%= product.name %>')">
+                                                                <i class="fas fa-credit-card"></i>
+                                                            </button>
+                                                        <% } else { %>
+                                                            <button type="button" class="btn btn-outline-success" title="查看POST配置" onclick="viewPostConfig(<%= product.id %>, '<%= product.name %>')">
+                                                                <i class="fas fa-api"></i>
+                                                            </button>
+                                                        <% } %>
                                                         <button type="button" class="btn btn-outline-danger" title="删除" onclick="deleteProduct(<%= product.id %>, '<%= product.name %>')">
                                                             <i class="fas fa-trash"></i>
                                                         </button>
@@ -216,7 +234,7 @@
                                         <% }); %>
                                     <% } else { %>
                                         <tr>
-                                            <td colspan="9" class="text-center text-muted py-4">
+                                            <td colspan="10" class="text-center text-muted py-4">
                                                 <i class="fas fa-box-open fa-3x mb-3 opacity-25"></i>
                                                 <p>暂无商品数据</p>
                                             </td>
@@ -284,6 +302,52 @@
                                         <% } %>
                                     </select>
                                 </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">商品类型 *</label>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="type" id="productTypeCard" value="card" checked onchange="togglePostData()">
+                                        <label class="form-check-label" for="productTypeCard">
+                                            <i class="fas fa-credit-card me-1"></i>
+                                            卡密类型
+                                        </label>
+                                        <small class="form-text text-muted d-block">发卡时从卡密库中获取</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="type" id="productTypePost" value="post" onchange="togglePostData()">
+                                        <label class="form-check-label" for="productTypePost">
+                                            <i class="fas fa-api me-1"></i>
+                                            POST类型
+                                        </label>
+                                        <small class="form-text text-muted d-block">发卡时调用第三方API</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3" id="postDataContainer" style="display: none;">
+                            <label for="productPostData" class="form-label">POST数据配置 *</label>
+                            <textarea class="form-control" id="productPostData" name="post_data" rows="6" placeholder='请输入JSON格式的POST数据配置，例如：
+{
+  "url": "https://api.example.com/cards",
+  "headers": {
+    "Authorization": "Bearer your-token",
+    "Content-Type": "application/json"
+  },
+  "body": {
+    "product_id": "{{product_id}}",
+    "quantity": "{{quantity}}"
+  }
+}'></textarea>
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                支持变量：{{product_id}} - 商品ID，{{quantity}} - 订单数量，{{order_id}} - 订单ID
                             </div>
                         </div>
                         
@@ -380,6 +444,52 @@
                         <div class="mb-3">
                             <label for="editProductDescription" class="form-label">商品描述</label>
                             <textarea class="form-control" id="editProductDescription" name="description" rows="3"></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">商品类型 *</label>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="type" id="editProductTypeCard" value="card" onchange="toggleEditPostData()">
+                                        <label class="form-check-label" for="editProductTypeCard">
+                                            <i class="fas fa-credit-card me-1"></i>
+                                            卡密类型
+                                        </label>
+                                        <small class="form-text text-muted d-block">发卡时从卡密库中获取</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="type" id="editProductTypePost" value="post" onchange="toggleEditPostData()">
+                                        <label class="form-check-label" for="editProductTypePost">
+                                            <i class="fas fa-api me-1"></i>
+                                            POST类型
+                                        </label>
+                                        <small class="form-text text-muted d-block">发卡时调用第三方API</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3" id="editPostDataContainer" style="display: none;">
+                            <label for="editProductPostData" class="form-label">POST数据配置 *</label>
+                            <textarea class="form-control" id="editProductPostData" name="post_data" rows="6" placeholder='请输入JSON格式的POST数据配置，例如：
+{
+  "url": "https://api.example.com/cards",
+  "headers": {
+    "Authorization": "Bearer your-token",
+    "Content-Type": "application/json"
+  },
+  "body": {
+    "product_id": "{{product_id}}",
+    "quantity": "{{quantity}}"
+  }
+}'></textarea>
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                支持变量：{{product_id}} - 商品ID，{{quantity}} - 订单数量，{{order_id}} - 订单ID
+                            </div>
                         </div>
 
                         <div class="row">
@@ -534,6 +644,38 @@
             }, 3000);
         }
 
+        // 切换POST数据输入框显示（添加商品）
+        function togglePostData() {
+            const postType = document.getElementById('productTypePost').checked;
+            const container = document.getElementById('postDataContainer');
+            const postDataInput = document.getElementById('productPostData');
+
+            if (postType) {
+                container.style.display = 'block';
+                postDataInput.required = true;
+            } else {
+                container.style.display = 'none';
+                postDataInput.required = false;
+                postDataInput.value = '';
+            }
+        }
+
+        // 切换POST数据输入框显示（编辑商品）
+        function toggleEditPostData() {
+            const postType = document.getElementById('editProductTypePost').checked;
+            const container = document.getElementById('editPostDataContainer');
+            const postDataInput = document.getElementById('editProductPostData');
+
+            if (postType) {
+                container.style.display = 'block';
+                postDataInput.required = true;
+            } else {
+                container.style.display = 'none';
+                postDataInput.required = false;
+                postDataInput.value = '';
+            }
+        }
+
         // 显示加载状态
         function showLoading(button) {
             const originalText = button.innerHTML;
@@ -597,6 +739,20 @@
                         document.getElementById('editProductMinStock').value = product.min_stock_alert || 10;
                         document.getElementById('editProductImage').value = product.image_url || '';
                         document.getElementById('editProductStatus').value = product.status || 'active';
+
+                        // 设置商品类型
+                        const productType = product.type || 'card';
+                        if (productType === 'card') {
+                            document.getElementById('editProductTypeCard').checked = true;
+                        } else {
+                            document.getElementById('editProductTypePost').checked = true;
+                        }
+
+                        // 设置POST数据
+                        document.getElementById('editProductPostData').value = product.post_data || '';
+
+                        // 切换POST数据显示
+                        toggleEditPostData();
 
                         // 显示模态框
                         const modal = new bootstrap.Modal(document.getElementById('editProductModal'));
@@ -754,6 +910,31 @@
                 .catch(error => {
                     alert('获取卡密数据失败: ' + error.message);
                     modal.hide();
+                });
+        }
+
+        // 查看POST配置
+        function viewPostConfig(productId, productName) {
+            fetch(`/api/products/${productId}`)
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        const product = result.data;
+                        let postData = '';
+
+                        try {
+                            postData = product.post_data ? JSON.stringify(JSON.parse(product.post_data), null, 2) : '无POST配置';
+                        } catch (error) {
+                            postData = product.post_data || '无POST配置';
+                        }
+
+                        alert(`商品：${productName}\n\nPOST配置：\n${postData}`);
+                    } else {
+                        alert('获取POST配置失败: ' + result.message);
+                    }
+                })
+                .catch(error => {
+                    alert('获取POST配置失败: ' + error.message);
                 });
         }
     </script>

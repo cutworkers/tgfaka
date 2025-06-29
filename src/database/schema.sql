@@ -41,6 +41,8 @@ CREATE TABLE IF NOT EXISTS products (
     sold_count INTEGER DEFAULT 0,
     min_stock_alert INTEGER DEFAULT 10,
     image_url TEXT,
+    type TEXT DEFAULT 'card' CHECK (type IN ('card', 'post')),
+    post_data TEXT,
     status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'out_of_stock')),
     sort_order INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

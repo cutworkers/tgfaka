@@ -45,6 +45,8 @@ GET /api/products
         "original_price": 120.00,
         "category_id": 1,
         "category_name": "游戏充值",
+        "type": "card",
+        "post_data": null,
         "status": "active",
         "stock_count": 50,
         "sold_count": 25,
@@ -78,6 +80,8 @@ GET /api/products/{id}
     "original_price": 120.00,
     "category_id": 1,
     "category_name": "游戏充值",
+    "type": "card",
+    "post_data": null,
     "status": "active",
     "stock_count": 50,
     "sold_count": 25,
@@ -95,6 +99,8 @@ POST /api/products
 ```
 
 **请求体**:
+
+**卡密类型商品**:
 ```json
 {
   "name": "Steam充值卡",
@@ -102,10 +108,31 @@ POST /api/products
   "price": 100.00,
   "original_price": 120.00,
   "category_id": 1,
+  "type": "card",
   "min_stock_alert": 10,
   "image_url": "https://example.com/image.jpg"
 }
 ```
+
+**POST类型商品**:
+```json
+{
+  "name": "API充值卡",
+  "description": "通过API获取的充值卡",
+  "price": 50.00,
+  "category_id": 1,
+  "type": "post",
+  "post_data": "{\"url\":\"https://api.example.com/cards\",\"headers\":{\"Authorization\":\"Bearer token\"},\"body\":{\"product_id\":\"{{product_id}}\",\"quantity\":\"{{quantity}}\"}}",
+  "min_stock_alert": 0
+}
+```
+
+**字段说明**:
+- `type` (string): 商品类型，可选值：`card`（卡密类型）、`post`（POST类型）
+- `post_data` (string): POST类型商品的API配置，JSON格式字符串，包含：
+  - `url` (string): API接口地址
+  - `headers` (object): 请求头
+  - `body` (object): 请求体，支持变量：`{{product_id}}`、`{{quantity}}`、`{{order_id}}`
 
 ### 更新商品
 ```http
@@ -116,6 +143,108 @@ PUT /api/products/{id}
 ```http
 DELETE /api/products/{id}
 ```
+
+## 🎯 商品类型详解
+
+### 商品类型概述
+
+系统支持两种商品类型：
+
+1. **卡密类型 (card)**：传统的卡密库存管理方式
+2. **POST类型 (post)**：通过第三方API实时获取卡密
+
+### 卡密类型商品
+
+卡密类型商品从预先导入的卡密库中发卡：
+
+**特点**:
+- 需要预先导入卡密到系统
+- 发卡速度快，响应稳定
+- 支持库存管理和预警
+- 适合固定库存的商品
+
+**发卡流程**:
+1. 用户下单
+2. 系统从卡密库中选择可用卡密
+3. 标记卡密为已售
+4. 返回卡密信息给用户
+
+### POST类型商品
+
+POST类型商品通过调用第三方API实时获取卡密：
+
+**特点**:
+- 无需预先导入卡密
+- 实时从第三方获取
+- 支持动态库存
+- 适合API供应商提供的商品
+
+**POST配置格式**:
+```json
+{
+  "url": "https://api.supplier.com/generate-cards",
+  "headers": {
+    "Authorization": "Bearer your-api-token",
+    "Content-Type": "application/json",
+    "X-API-Key": "your-api-key"
+  },
+  "body": {
+    "product_id": "{{product_id}}",
+    "quantity": "{{quantity}}",
+    "order_id": "{{order_id}}",
+    "custom_field": "custom_value"
+  }
+}
+```
+
+**支持的变量**:
+- `{{product_id}}`: 商品ID
+- `{{quantity}}`: 订单数量
+- `{{order_id}}`: 订单ID
+
+**API响应格式**:
+
+第三方API应返回以下格式之一：
+
+**数组格式**:
+```json
+[
+  {
+    "card_number": "1234567890",
+    "card_password": "abcdef123456"
+  },
+  {
+    "card_number": "0987654321",
+    "card_password": "654321fedcba"
+  }
+]
+```
+
+**对象包装格式**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "cardNumber": "1234567890",
+      "cardPassword": "abcdef123456"
+    }
+  ]
+}
+```
+
+**单个卡密格式**:
+```json
+{
+  "card_number": "1234567890",
+  "card_password": "abcdef123456"
+}
+```
+
+**字段映射**:
+系统支持多种字段名称：
+- 卡号：`card_number`、`cardNumber`、`number`
+- 密码：`card_password`、`cardPassword`、`password`、`code`
 
 ## 🎫 卡密管理 API
 
