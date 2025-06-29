@@ -29,8 +29,8 @@ Internet
 ### 使用部署脚本
 ```bash
 # 克隆项目
-git clone https://github.com/your-username/telegram-shop.git
-cd telegram-shop
+git clone https://github.com/cutworkers/tgfaka.git
+cd tgfaka
 
 # 运行自动部署脚本
 chmod +x scripts/deploy.sh
@@ -77,8 +77,8 @@ sudo su - deploy
 ### 3. 部署应用
 ```bash
 # 克隆项目
-git clone https://github.com/your-username/telegram-shop.git
-cd telegram-shop
+git clone https://github.com/cutworkers/tgfaka.git
+cd tgfaka
 
 # 安装依赖
 npm ci --only=production
@@ -93,7 +93,7 @@ nano .env
 # 生产环境配置
 NODE_ENV=production
 PORT=3000
-DATABASE_PATH=/home/deploy/telegram-shop/database/production.db
+DATABASE_PATH=/home/deploy/tgfaka/database/production.db
 
 # Telegram Bot配置
 BOT_TOKEN=your_real_bot_token
@@ -149,13 +149,13 @@ sudo certbot --nginx -d your-domain.com -d www.your-domain.com
 ### 2. 配置Nginx
 ```bash
 # 复制配置文件
-sudo cp nginx.conf /etc/nginx/sites-available/telegram-shop
+sudo cp nginx.conf /etc/nginx/sites-available/tgfaka
 
 # 编辑配置文件
-sudo nano /etc/nginx/sites-available/telegram-shop
+sudo nano /etc/nginx/sites-available/tgfaka
 
 # 启用站点
-sudo ln -s /etc/nginx/sites-available/telegram-shop /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/tgfaka /etc/nginx/sites-enabled/
 
 # 删除默认站点
 sudo rm /etc/nginx/sites-enabled/default
@@ -292,10 +292,10 @@ DATE=$(date +%Y%m%d_%H%M%S)
 mkdir -p $BACKUP_DIR
 
 # 备份数据库
-cp /home/deploy/telegram-shop/database/production.db $BACKUP_DIR/db_$DATE.db
+cp /home/deploy/tgfaka/database/production.db $BACKUP_DIR/db_$DATE.db
 
 # 备份配置文件
-cp /home/deploy/telegram-shop/.env $BACKUP_DIR/env_$DATE
+cp /home/deploy/tgfaka/.env $BACKUP_DIR/env_$DATE
 
 # 压缩备份
 tar -czf $BACKUP_DIR/backup_$DATE.tar.gz $BACKUP_DIR/db_$DATE.db $BACKUP_DIR/env_$DATE

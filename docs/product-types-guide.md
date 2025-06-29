@@ -324,4 +324,4 @@ console.log(urlStats);
 联系方式：
 - 邮箱：support@example.com
 - 文档：https://docs.example.com
-- GitHub：https://github.com/example/telegram-shop
+- GitHub：https://github.com/example/tgfaka

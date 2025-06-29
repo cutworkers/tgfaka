@@ -61,7 +61,7 @@ pm2 status
 pm2 logs telegram-shop --lines 100
 
 # 手动启动测试
-cd /path/to/telegram-shop
+cd /path/to/tgfaka
 NODE_ENV=production node src/app.js
 ```
 
@@ -358,7 +358,7 @@ pm2 delete telegram-shop
 pm2 start ecosystem.config.js --instances max
 
 # 优化Nginx配置
-sudo nano /etc/nginx/sites-available/telegram-shop
+sudo nano /etc/nginx/sites-available/tgfaka
 # 添加缓存和压缩配置
 sudo systemctl reload nginx
 ```

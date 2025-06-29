@@ -10,8 +10,8 @@
 node --version
 
 # 克隆项目
-git clone https://github.com/your-username/telegram-shop.git
-cd telegram-shop
+git clone https://github.com/cutworkers/tgfaka.git
+cd tgfaka
 ```
 
 ### 步骤2: 安装配置 (2分钟)
@@ -202,8 +202,8 @@ npm install -g pm2
 npm run pm2:start
 
 # 配置Nginx反向代理
-sudo cp nginx.conf /etc/nginx/sites-available/telegram-shop
-sudo ln -s /etc/nginx/sites-available/telegram-shop /etc/nginx/sites-enabled/
+sudo cp nginx.conf /etc/nginx/sites-available/tgfaka
+sudo ln -s /etc/nginx/sites-available/tgfaka /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 ```
 

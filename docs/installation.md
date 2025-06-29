@@ -85,13 +85,13 @@ npm install -g pm2
 ### 1. 克隆项目
 ```bash
 # 使用 HTTPS
-git clone https://github.com/your-username/telegram-shop.git
+git clone https://github.com/cutworkers/tgfaka.git
 
 # 或使用 SSH
-git clone git@github.com:your-username/telegram-shop.git
+git clone git@github.com:cutworkers/tgfaka.git
 
 # 进入项目目录
-cd telegram-shop
+cd tgfaka
 ```
 
 ### 2. 安装依赖
@@ -225,7 +225,7 @@ n latest
 ### 权限问题
 ```bash
 # Linux/macOS 权限问题
-sudo chown -R $USER:$USER /path/to/telegram-shop
+sudo chown -R $USER:$USER /path/to/tgfaka
 chmod +x scripts/*.sh
 ```
 

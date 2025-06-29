@@ -56,8 +56,8 @@ module.exports = {
       user: 'deploy',
       host: ['your-server.com'],
       ref: 'origin/main',
-      repo: 'git@github.com:your-username/telegram-shop.git',
-      path: '/var/www/telegram-shop',
+      repo: 'git@github.com:cutworkers/tgfaka.git',
+      path: '/var/www/tgfaka',
       'pre-deploy-local': '',
       'post-deploy': 'npm install && npm run build && pm2 reload ecosystem.config.js --env production',
       'pre-setup': '',
@@ -68,8 +68,8 @@ module.exports = {
       user: 'deploy',
       host: ['staging-server.com'],
       ref: 'origin/develop',
-      repo: 'git@github.com:your-username/telegram-shop.git',
-      path: '/var/www/telegram-shop-staging',
+      repo: 'git@github.com:cutworkers/tgfaka.git',
+      path: '/var/www/tgfaka-staging',
       'post-deploy': 'npm install && pm2 reload ecosystem.config.js --env staging'
     }
   }

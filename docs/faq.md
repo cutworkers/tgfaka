@@ -322,10 +322,10 @@ sqlite3 database/production.db "VACUUM;"
 sudo apt install logrotate
 
 # 创建配置文件
-sudo nano /etc/logrotate.d/telegram-shop
+sudo nano /etc/logrotate.d/tgfaka
 
 # 配置内容
-/home/deploy/telegram-shop/logs/*.log {
+/home/deploy/tgfaka/logs/*.log {
     daily
     missingok
     rotate 30
@@ -336,7 +336,7 @@ sudo nano /etc/logrotate.d/telegram-shop
 }
 
 # 测试配置
-sudo logrotate -d /etc/logrotate.d/telegram-shop
+sudo logrotate -d /etc/logrotate.d/tgfaka
 ```
 
 ### Q: 数据库锁定错误？
