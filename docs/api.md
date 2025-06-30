@@ -518,6 +518,54 @@ GET /api/health
 GET /api/docs
 ```
 
+## 👤 用户管理 API
+
+### 获取用户订单
+```http
+GET /api/users/{user_id}/orders
+```
+
+**路径参数**:
+- `user_id` (int): 用户ID
+
+**查询参数**:
+- `status` (string): 订单状态筛选
+- `page` (int): 页码，默认1
+- `limit` (int): 每页数量，默认10
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "data": {
+    "orders": [
+      {
+        "id": 1,
+        "order_no": "ORD20240101001",
+        "user_id": 1,
+        "product_id": 1,
+        "product_name": "Steam充值卡",
+        "quantity": 1,
+        "unit_price": 100.00,
+        "total_amount": 100.00,
+        "status": "completed",
+        "payment_method": "usdt",
+        "created_at": "2024-01-01T10:00:00Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 10
+    }
+  }
+}
+```
+
+**注意事项**:
+- 用户管理主要通过Bot界面进行
+- 邮箱绑定等功能通过Bot命令实现
+- API主要用于后台管理和数据查询
+
 ## 📝 错误响应
 
 所有API错误响应格式统一：
