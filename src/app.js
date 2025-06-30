@@ -95,9 +95,9 @@ class App {
 
     // Session诊断中间件（仅在开发和调试时启用）
     if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_SESSION === 'true') {
-      this.app.use(SessionDiagnostic.diagnoseSession);
+      this.app.use(SessionDiagnostic.diagnoseSession.bind(SessionDiagnostic));
     }
-    this.app.use(SessionDiagnostic.adminSessionDiagnostic);
+    this.app.use(SessionDiagnostic.adminSessionDiagnostic.bind(SessionDiagnostic));
 
     // 站点配置中间件
     this.app.use(siteConfigMiddleware);
@@ -172,14 +172,43 @@ class App {
     // API路由
     this.app.use('/api', apiRoutes);
 
-    // Web管理后台路由
-    this.app.use('/', webRoutes);
+    // Bot Webhook路由（必须在根路径路由之前）
+    const webhookHandler = botService.webhookCallback();
+    logger.info('注册Webhook路由', {
+      path: '/webhook',
+      handlerType: typeof webhookHandler,
+      botConfigured: !!botService.bot,
+      botServiceType: typeof botService,
+      botServiceKeys: Object.keys(botService)
+    });
 
-    // Bot Webhook路由
-    this.app.use('/webhook', botService.webhookCallback());
+    this.app.use('/webhook', webhookHandler);
+
+    // 验证webhook路由注册
+    setTimeout(() => {
+      const routes = [];
+      this.app._router.stack.forEach((middleware) => {
+        if (middleware.regexp && middleware.regexp.source.includes('webhook')) {
+          routes.push({
+            path: middleware.regexp.source,
+            name: middleware.name || 'anonymous'
+          });
+        }
+      });
+      logger.info('Webhook路由验证', { registeredRoutes: routes });
+    }, 100);
+
+    // Web管理后台路由（使用根路径，必须在webhook之后）
+    this.app.use('/', webRoutes);
 
     // 404处理
     this.app.use((req, res) => {
+      logger.warn('404请求', {
+        method: req.method,
+        url: req.url,
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      });
       res.status(404).json({ error: '页面不存在' });
     });
 

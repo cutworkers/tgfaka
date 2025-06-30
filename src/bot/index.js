@@ -480,14 +480,42 @@ class BotService {
         logger.warn('Webhook请求但Bot未配置', {
           method: req.method,
           url: req.url,
-          ip: req.ip
+          ip: req.ip,
+          headers: req.headers
         });
         res.status(404).json({ error: 'Bot未配置' });
       };
     }
 
-    logger.info('Bot webhook回调已配置');
-    return this.bot.webhookCallback('/webhook');
+    logger.info('Bot webhook回调已配置', {
+      botExists: !!this.bot,
+      botToken: this.bot.token ? `${this.bot.token.substring(0, 10)}...` : 'none'
+    });
+
+    // 创建webhook回调（不传递路径参数）
+    const originalCallback = this.bot.webhookCallback();
+
+    return (req, res, next) => {
+      logger.debug('Webhook请求接收', {
+        method: req.method,
+        url: req.url,
+        ip: req.ip,
+        contentType: req.get('Content-Type'),
+        bodySize: req.body ? JSON.stringify(req.body).length : 0
+      });
+
+      try {
+        return originalCallback(req, res, next);
+      } catch (error) {
+        logger.error('Webhook处理错误', {
+          error: error.message,
+          stack: error.stack,
+          method: req.method,
+          url: req.url
+        });
+        res.status(500).json({ error: 'Webhook处理失败' });
+      }
+    };
   }
 
   async stop() {

@@ -7,6 +7,7 @@ class Order {
     this.order_no = data.order_no;
     this.user_id = data.user_id;
     this.product_id = data.product_id;
+    this.product_name = data.product_name;
     this.quantity = data.quantity || 1;
     this.unit_price = data.unit_price;
     this.total_amount = data.total_amount;
