@@ -113,14 +113,34 @@ class BotService {
     this.bot.on('callback_query', async (ctx) => {
       const data = ctx.callbackQuery.data;
 
-      if (data.startsWith('product_')) {
-        await this.handleProductAction(ctx, data);
-      } else if (data.startsWith('order_')) {
-        await this.handleOrderAction(ctx, data);
-      } else if (data.startsWith('buy_')) {
-        await this.handleBuyAction(ctx, data);
-      } else if (data.startsWith('payment_')) {
-        await this.handlePaymentAction(ctx, data);
+      try {
+        if (data.startsWith('product_')) {
+          await this.handleProductAction(ctx, data);
+        } else if (data.startsWith('order_')) {
+          await this.handleOrderAction(ctx, data);
+        } else if (data.startsWith('buy_')) {
+          await this.handleBuyAction(ctx, data);
+        } else if (data.startsWith('payment_')) {
+          await this.handlePaymentAction(ctx, data);
+        } else if (data.startsWith('products_page_')) {
+          await this.handleProductsPage(ctx, data);
+        } else if (data.startsWith('orders_page_')) {
+          await this.handleOrdersPage(ctx, data);
+        } else if (data === 'main_menu') {
+          await this.handleMainMenu(ctx);
+        } else if (data === 'out_of_stock') {
+          await ctx.answerCbQuery('商品暂时缺货，请稍后再试');
+        } else {
+          logger.warn('未处理的回调查询', { data, userId: ctx.from.id });
+          await ctx.answerCbQuery('操作暂不支持');
+        }
+      } catch (error) {
+        logger.error('回调查询处理失败', {
+          error: error.message,
+          data,
+          userId: ctx.from.id
+        });
+        await ctx.answerCbQuery('操作失败，请稍后再试');
       }
 
       await ctx.answerCbQuery();
@@ -145,7 +165,7 @@ class BotService {
         return;
       }
 
-      const message = this.messageService.formatProductList(products);
+      const message = this.productService.formatProductList(products);
       const keyboard = this.productService.getProductKeyboard(products, page);
 
       await ctx.reply(message, keyboard);
@@ -166,7 +186,7 @@ class BotService {
         return;
       }
 
-      const message = this.messageService.formatOrderList(orders);
+      const message = this.orderService.formatOrderList(orders);
       const keyboard = this.orderService.getOrderKeyboard(orders, page);
 
       await ctx.reply(message, keyboard);
@@ -448,6 +468,79 @@ class BotService {
     } catch (error) {
       logger.error('取消订单失败', { error: error.message, orderId });
       await ctx.answerCbQuery(`取消失败: ${error.message}`);
+    }
+  }
+
+  // 处理商品列表分页
+  async handleProductsPage(ctx, data) {
+    try {
+      const page = parseInt(data.split('_')[2]) || 1;
+      const products = await this.productService.getActiveProducts(page);
+
+      if (products.length === 0) {
+        await ctx.answerCbQuery('没有更多商品了');
+        return;
+      }
+
+      const message = this.productService.formatProductList(products);
+      const keyboard = this.productService.getProductKeyboard(products, page);
+
+      await ctx.editMessageText(message, {
+        parse_mode: 'Markdown',
+        ...keyboard
+      });
+    } catch (error) {
+      logger.error('处理商品分页失败', { error: error.message, data });
+      await ctx.answerCbQuery('加载商品列表失败');
+    }
+  }
+
+  // 处理订单列表分页
+  async handleOrdersPage(ctx, data) {
+    try {
+      const page = parseInt(data.split('_')[2]) || 1;
+      const userId = await this.userService.getUserId(ctx.from.id);
+      const orders = await this.orderService.getUserOrders(userId, page);
+
+      if (orders.length === 0) {
+        await ctx.answerCbQuery('没有更多订单了');
+        return;
+      }
+
+      const message = this.orderService.formatOrderList(orders);
+      const keyboard = this.orderService.getOrderKeyboard(orders, page);
+
+      await ctx.editMessageText(message, {
+        parse_mode: 'Markdown',
+        ...keyboard
+      });
+    } catch (error) {
+      logger.error('处理订单分页失败', { error: error.message, data });
+      await ctx.answerCbQuery('加载订单列表失败');
+    }
+  }
+
+  // 处理返回主菜单
+  async handleMainMenu(ctx) {
+    try {
+      const welcomeMessage = await this.messageService.getWelcomeMessage(ctx.from);
+      const keyboard = this.getMainKeyboard();
+
+      await ctx.editMessageText(welcomeMessage, {
+        parse_mode: 'Markdown',
+        ...keyboard
+      });
+    } catch (error) {
+      logger.error('返回主菜单失败', { error: error.message });
+      // 如果编辑消息失败，尝试发送新消息
+      try {
+        const welcomeMessage = await this.messageService.getWelcomeMessage(ctx.from);
+        const keyboard = this.getMainKeyboard();
+        await ctx.reply(welcomeMessage, keyboard);
+      } catch (fallbackError) {
+        logger.error('发送主菜单消息失败', { error: fallbackError.message });
+        await ctx.answerCbQuery('返回主菜单失败');
+      }
     }
   }
 

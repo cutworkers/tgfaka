@@ -91,7 +91,7 @@ class MessageService {
       message += `\n\n`;
     });
 
-    message += `👆 点击上方按钮查看详情并购买`;
+    message += `👇 点击下方按钮查看详情并购买`;
     
     return message;
   }
@@ -114,7 +114,7 @@ class MessageService {
       message += `   📅 ${this.formatDate(order.created_at)}\n\n`;
     });
 
-    message += `👆 点击订单号查看详情`;
+    message += `👇 点击订单号查看详情`;
     
     return message;
   }
