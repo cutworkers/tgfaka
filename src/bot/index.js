@@ -28,6 +28,9 @@ class BotService {
     this.orderService = new OrderService();
     this.messageService = new MessageService();
 
+    // 用户状态管理
+    this.userStates = new Map();
+
     this.setupMiddleware();
     this.setupCommands();
     this.setupActions();
@@ -86,6 +89,16 @@ class BotService {
     this.bot.command('balance', async (ctx) => {
       await this.showBalance(ctx);
     });
+
+    // 邮箱绑定命令
+    this.bot.command('bind_email', async (ctx) => {
+      await this.startEmailBinding(ctx);
+    });
+
+    // 查看个人信息命令
+    this.bot.command('profile', async (ctx) => {
+      await this.showProfile(ctx);
+    });
   }
 
   setupActions() {
@@ -104,9 +117,18 @@ class BotService {
       await this.showBalance(ctx);
     });
 
+    this.bot.hears('👤 个人信息', async (ctx) => {
+      await this.showProfile(ctx);
+    });
+
     this.bot.hears('❓ 帮助', async (ctx) => {
       const helpMessage = this.messageService.getHelpMessage();
       await ctx.reply(helpMessage);
+    });
+
+    // 处理文本消息（用于email绑定等状态处理）
+    this.bot.on('text', async (ctx) => {
+      await this.handleTextMessage(ctx);
     });
 
     // 回调查询处理
@@ -151,7 +173,8 @@ class BotService {
   getMainKeyboard() {
     return Markup.keyboard([
       ['🛍️ 商品列表', '📋 我的订单'],
-      ['💰 余额查询', '❓ 帮助']
+      ['💰 余额查询', '👤 个人信息'],
+      ['❓ 帮助']
     ]).resize();
   }
 
@@ -542,6 +565,168 @@ class BotService {
         await ctx.answerCbQuery('返回主菜单失败');
       }
     }
+  }
+
+  // 开始邮箱绑定流程
+  async startEmailBinding(ctx) {
+    try {
+      const user = await this.userService.getUser(ctx.from.id);
+
+      let message = '📧 **邮箱绑定**\n\n';
+
+      if (user.email) {
+        message += `当前绑定邮箱: \`${user.email}\`\n\n`;
+        message += '请发送新的邮箱地址来更新绑定，或发送 /cancel 取消操作。';
+      } else {
+        message += '请发送您的邮箱地址进行绑定。\n\n';
+        message += '📝 **注意事项:**\n';
+        message += '• 请确保邮箱地址正确\n';
+        message += '• 邮箱将用于接收重要通知\n';
+        message += '• 发送 /cancel 可取消操作';
+      }
+
+      // 设置用户状态为等待邮箱输入
+      this.userStates.set(ctx.from.id, {
+        state: 'waiting_email',
+        timestamp: Date.now()
+      });
+
+      await ctx.reply(message, { parse_mode: 'Markdown' });
+
+    } catch (error) {
+      logger.error('开始邮箱绑定失败', { error: error.message });
+      await ctx.reply('❌ 获取用户信息失败，请稍后再试。');
+    }
+  }
+
+  // 处理文本消息
+  async handleTextMessage(ctx) {
+    const userId = ctx.from.id;
+    const userState = this.userStates.get(userId);
+
+    // 如果用户没有特殊状态，忽略文本消息
+    if (!userState) {
+      return;
+    }
+
+    // 检查状态是否过期（10分钟）
+    if (Date.now() - userState.timestamp > 10 * 60 * 1000) {
+      this.userStates.delete(userId);
+      await ctx.reply('⏰ 操作已超时，请重新开始。');
+      return;
+    }
+
+    try {
+      switch (userState.state) {
+        case 'waiting_email':
+          await this.handleEmailInput(ctx, ctx.message.text);
+          break;
+        default:
+          // 未知状态，清除
+          this.userStates.delete(userId);
+          break;
+      }
+    } catch (error) {
+      logger.error('处理文本消息失败', {
+        error: error.message,
+        userId,
+        state: userState.state
+      });
+      await ctx.reply('❌ 处理失败，请稍后再试。');
+      this.userStates.delete(userId);
+    }
+  }
+
+  // 处理邮箱输入
+  async handleEmailInput(ctx, email) {
+    const userId = ctx.from.id;
+
+    try {
+      // 检查是否是取消命令
+      if (email.toLowerCase() === '/cancel') {
+        this.userStates.delete(userId);
+        await ctx.reply('❌ 邮箱绑定已取消。');
+        return;
+      }
+
+      // 更新用户邮箱
+      await this.userService.updateEmail(userId, email);
+
+      // 清除用户状态
+      this.userStates.delete(userId);
+
+      // 发送成功消息
+      let message = '✅ **邮箱绑定成功！**\n\n';
+      message += `📧 绑定邮箱: \`${email}\`\n\n`;
+      message += '您现在可以通过此邮箱接收重要通知。';
+
+      await ctx.reply(message, { parse_mode: 'Markdown' });
+
+      // 记录操作日志
+      await this.userService.logUserAction(userId, 'bind_email', { email });
+
+    } catch (error) {
+      logger.error('处理邮箱输入失败', { error: error.message, userId, email });
+
+      if (error.message === '邮箱格式不正确') {
+        await ctx.reply('❌ 邮箱格式不正确，请重新输入有效的邮箱地址。\n\n发送 /cancel 可取消操作。');
+      } else {
+        await ctx.reply('❌ 邮箱绑定失败，请稍后再试。');
+        this.userStates.delete(userId);
+      }
+    }
+  }
+
+  // 显示个人信息
+  async showProfile(ctx) {
+    try {
+      const user = await this.userService.getUser(ctx.from.id);
+      const stats = await user.getStats();
+
+      let message = '👤 **个人信息**\n\n';
+      message += `🆔 用户ID: \`${user.telegram_id}\`\n`;
+
+      if (user.username) {
+        message += `👤 用户名: @${user.username}\n`;
+      }
+
+      const displayName = this.userService.getUserDisplayName(ctx.from);
+      message += `📝 昵称: ${displayName}\n`;
+
+      if (user.email) {
+        message += `📧 邮箱: \`${user.email}\`\n`;
+      } else {
+        message += `📧 邮箱: 未绑定\n`;
+      }
+
+      message += `💰 余额: ¥${user.balance}\n`;
+      message += `💳 总消费: ¥${stats.total_spent || 0}\n`;
+      message += `📦 订单数: ${stats.total_orders || 0}笔\n`;
+      message += `📅 注册时间: ${this.formatDate(user.created_at)}\n\n`;
+
+      message += '💡 **可用命令:**\n';
+      message += '• /bind_email - 绑定邮箱\n';
+      message += '• /balance - 查看余额\n';
+      message += '• /orders - 我的订单';
+
+      await ctx.reply(message, { parse_mode: 'Markdown' });
+
+    } catch (error) {
+      logger.error('显示个人信息失败', { error: error.message });
+      await ctx.reply('❌ 获取个人信息失败，请稍后再试。');
+    }
+  }
+
+  // 格式化日期
+  formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   }
 
   async start() {

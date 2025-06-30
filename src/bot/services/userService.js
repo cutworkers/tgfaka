@@ -196,7 +196,7 @@ class UserService {
   async logUserAction(telegramId, action, details = {}) {
     try {
       const user = await this.getUser(telegramId);
-      
+
       // 这里可以记录到操作日志表
       logger.info('用户操作', {
         userId: user.id,
@@ -210,6 +210,56 @@ class UserService {
         telegramId,
         action
       });
+    }
+  }
+
+  // 更新用户邮箱
+  async updateEmail(telegramId, email) {
+    try {
+      const user = await this.getUser(telegramId);
+
+      // 验证邮箱格式
+      if (!this.validateEmail(email)) {
+        throw new Error('邮箱格式不正确');
+      }
+
+      // 更新邮箱
+      const updatedUser = await user.update({ email });
+
+      logger.info('用户邮箱更新成功', {
+        userId: user.id,
+        telegramId,
+        email: email
+      });
+
+      return updatedUser;
+    } catch (error) {
+      logger.error('更新用户邮箱失败', {
+        error: error.message,
+        telegramId,
+        email
+      });
+      throw error;
+    }
+  }
+
+  // 验证邮箱格式
+  validateEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+
+  // 获取用户邮箱
+  async getUserEmail(telegramId) {
+    try {
+      const user = await this.getUser(telegramId);
+      return user.email;
+    } catch (error) {
+      logger.error('获取用户邮箱失败', {
+        error: error.message,
+        telegramId
+      });
+      throw error;
     }
   }
 }

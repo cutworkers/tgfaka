@@ -32,6 +32,8 @@ class MessageService {
     message += `/products - 查看商品\n`;
     message += `/orders - 我的订单\n`;
     message += `/balance - 余额查询\n`;
+    message += `/profile - 个人信息\n`;
+    message += `/bind_email - 绑定邮箱\n`;
     message += `/help - 显示帮助\n\n`;
     
     message += `❗ **注意事项：**\n`;
