@@ -113,8 +113,30 @@ class App {
   }
 
   configureRoutes() {
-    // Session测试路由（仅用于调试）
-    if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_SESSION === 'true') {
+    // 路由诊断（仅用于调试）
+    if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_ROUTES === 'true') {
+      this.app.get('/debug/routes', (req, res) => {
+        const routes = [];
+        this.app._router.stack.forEach((middleware) => {
+          if (middleware.route) {
+            routes.push({
+              path: middleware.route.path,
+              methods: Object.keys(middleware.route.methods)
+            });
+          } else if (middleware.name === 'router') {
+            middleware.handle.stack.forEach((handler) => {
+              if (handler.route) {
+                routes.push({
+                  path: handler.route.path,
+                  methods: Object.keys(handler.route.methods)
+                });
+              }
+            });
+          }
+        });
+        res.json({ routes });
+      });
+
       this.app.get('/debug/session', (req, res) => {
         const report = SessionDiagnostic.generateHealthReport(req);
         res.json({
@@ -129,6 +151,23 @@ class App {
         });
       });
     }
+
+    // 健康检查路由（直接在根级别添加）
+    this.app.get('/health', (req, res) => {
+      res.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        version: '1.0.0',
+        environment: process.env.NODE_ENV || 'development',
+        routes: {
+          api: '/api/*',
+          webhook: '/webhook',
+          admin: '/admin/*'
+        }
+      });
+    });
 
     // API路由
     this.app.use('/api', apiRoutes);
@@ -157,7 +196,65 @@ class App {
       logger.info(`服务器启动成功，端口: ${port}`);
       logger.info(`管理后台: http://localhost:${port}/admin`);
       logger.info(`API文档: http://localhost:${port}/api/docs`);
+      logger.info(`健康检查: http://localhost:${port}/health`);
+
+      // 验证关键路由
+      this.verifyRoutes(port);
     });
+  }
+
+  // 验证关键路由是否正确注册
+  verifyRoutes(port) {
+    // 延迟验证，确保服务器完全启动
+    setTimeout(async () => {
+      const axios = require('axios');
+      const baseURL = `http://localhost:${port}`;
+
+      const routes = [
+        { path: '/health', name: '健康检查' },
+        { path: '/api/health', name: 'API健康检查' },
+        { path: '/api/docs', name: 'API文档' }
+      ];
+
+      logger.info('开始验证关键路由...');
+
+      for (const route of routes) {
+        try {
+          const response = await axios.get(`${baseURL}${route.path}`, {
+            timeout: 2000,
+            validateStatus: () => true
+          });
+
+          if (response.status === 200) {
+            logger.info(`✅ ${route.name} (${route.path}) - 正常`);
+          } else {
+            logger.warn(`⚠️  ${route.name} (${route.path}) - 状态码: ${response.status}`);
+          }
+        } catch (error) {
+          logger.error(`❌ ${route.name} (${route.path}) - 错误: ${error.message}`);
+        }
+      }
+
+      // 验证Webhook路由
+      try {
+        const response = await axios.post(`${baseURL}/webhook`, {}, {
+          timeout: 2000,
+          validateStatus: () => true
+        });
+
+        if (response.status === 404 && response.data?.error === 'Bot未配置') {
+          logger.info('✅ Webhook路由 (/webhook) - Bot未配置（正常）');
+        } else if (response.status === 200) {
+          logger.info('✅ Webhook路由 (/webhook) - Bot已配置并正常');
+        } else {
+          logger.warn(`⚠️  Webhook路由 (/webhook) - 状态码: ${response.status}`);
+        }
+      } catch (error) {
+        logger.error(`❌ Webhook路由 (/webhook) - 错误: ${error.message}`);
+      }
+
+      logger.info('路由验证完成');
+    }, 1000);
   }
 }
 

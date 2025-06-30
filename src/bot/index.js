@@ -475,10 +475,18 @@ class BotService {
 
   webhookCallback() {
     if (!this.bot) {
+      logger.warn('Bot未配置，webhook将返回404');
       return (req, res) => {
+        logger.warn('Webhook请求但Bot未配置', {
+          method: req.method,
+          url: req.url,
+          ip: req.ip
+        });
         res.status(404).json({ error: 'Bot未配置' });
       };
     }
+
+    logger.info('Bot webhook回调已配置');
     return this.bot.webhookCallback('/webhook');
   }
 
