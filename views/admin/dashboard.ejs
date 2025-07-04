@@ -260,6 +260,8 @@
                                                                 <span class="badge bg-warning badge-status">待支付</span>
                                                             <% } else if (order.status === 'cancelled') { %>
                                                                 <span class="badge bg-danger badge-status">已取消</span>
+                                                            <% } else if (order.status === 'expired') { %>
+                                                                <span class="badge bg-danger badge-status">已过期</span>
                                                             <% } else { %>
                                                                 <span class="badge bg-secondary badge-status"><%= order.status %></span>
                                                             <% } %>
