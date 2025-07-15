@@ -1,68 +1,91 @@
 const fs = require('fs');
 const path = require('path');
-const sqlite3 = require('sqlite3').verbose();
 const config = require('../config');
 const logger = require('../utils/logger');
+const DatabaseFactory = require('./adapters/DatabaseFactory');
 
 class DatabaseInitializer {
   constructor() {
-    this.dbPath = config.database.path;
-    this.schemaPath = path.join(__dirname, 'schema.sql');
+    this.config = config.database;
+    this.adapter = null;
   }
 
   async init() {
     try {
-      // 确保数据库目录存在
-      const dbDir = path.dirname(this.dbPath);
-      if (!fs.existsSync(dbDir)) {
-        fs.mkdirSync(dbDir, { recursive: true });
-        logger.info('创建数据库目录', { path: dbDir });
-      }
+      const dbType = this.config.type.toLowerCase();
+      logger.info('开始初始化数据库', { type: dbType });
 
-      // 连接数据库
-      const db = new sqlite3.Database(this.dbPath);
-      
-      // 启用外键约束
-      await this.runQuery(db, 'PRAGMA foreign_keys = ON');
-      
-      // 读取并执行schema.sql
-      const schema = fs.readFileSync(this.schemaPath, 'utf8');
-      const statements = schema.split(';').filter(stmt => stmt.trim());
-      
-      for (const statement of statements) {
-        if (statement.trim()) {
-          await this.runQuery(db, statement);
+      // 创建数据库适配器
+      this.adapter = DatabaseFactory.createAdapter(this.config);
+
+      // 对于SQLite，确保数据库目录存在
+      if (dbType === 'sqlite') {
+        const dbDir = path.dirname(this.config.path);
+        if (!fs.existsSync(dbDir)) {
+          fs.mkdirSync(dbDir, { recursive: true });
+          logger.info('创建数据库目录', { path: dbDir });
         }
       }
 
-      // 插入默认配置
-      await this.insertDefaultConfig(db);
-      
-      // 创建默认管理员
-      await this.createDefaultAdmin(db);
+      // 初始化数据库连接
+      await this.adapter.init();
 
-      db.close();
-      logger.info('数据库初始化完成', { path: this.dbPath });
-      
+      // 读取并执行schema文件
+      await this.executeSchema();
+
+      // 插入默认配置
+      await this.insertDefaultConfig();
+
+      // 创建默认管理员
+      await this.createDefaultAdmin();
+
+      // 关闭连接
+      await this.adapter.close();
+      logger.info('数据库初始化完成', { type: dbType });
+
     } catch (error) {
       logger.error('数据库初始化失败', { error: error.message });
+      if (this.adapter) {
+        await this.adapter.close();
+      }
       throw error;
     }
   }
 
-  runQuery(db, query, params = []) {
-    return new Promise((resolve, reject) => {
-      db.run(query, params, function(err) {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(this);
+  async executeSchema() {
+    const dbType = this.config.type.toLowerCase();
+    let schemaPath;
+
+    // 根据数据库类型选择schema文件
+    if (dbType === 'mysql') {
+      schemaPath = path.join(__dirname, 'mysql-schema.sql');
+    } else {
+      schemaPath = path.join(__dirname, 'schema.sql');
+    }
+
+    logger.info('执行数据库schema', { schemaPath });
+
+    // 读取schema文件
+    const schema = fs.readFileSync(schemaPath, 'utf8');
+    const statements = schema.split(';').filter(stmt => stmt.trim());
+
+    // 执行每个SQL语句
+    for (const statement of statements) {
+      if (statement.trim()) {
+        try {
+          await this.adapter.run(statement);
+        } catch (error) {
+          // 对于MySQL，忽略表已存在的错误
+          if (dbType === 'mysql' && error.code === 'ER_TABLE_EXISTS_ERROR') {
+            continue;
+          }
+          throw error;
         }
-      });
-    });
+      }
+    }
   }
 
-  async insertDefaultConfig(db) {
+  async insertDefaultConfig() {
     const defaultConfigs = [
       {
         key: 'site_name',
@@ -108,10 +131,13 @@ class DatabaseInitializer {
       }
     ];
 
+    const dbType = this.config.type.toLowerCase();
+    const insertIgnoreSql = dbType === 'mysql' ? 'INSERT IGNORE' : 'INSERT OR IGNORE';
+
     for (const config of defaultConfigs) {
       try {
-        await this.runQuery(db, 
-          'INSERT OR IGNORE INTO system_config (config_key, config_value, config_type, description) VALUES (?, ?, ?, ?)',
+        await this.adapter.run(
+          `${insertIgnoreSql} INTO system_config (config_key, config_value, config_type, description) VALUES (?, ?, ?, ?)`,
           [config.key, config.value, config.type, config.description]
         );
       } catch (error) {
@@ -122,15 +148,18 @@ class DatabaseInitializer {
     logger.info('默认配置插入完成');
   }
 
-  async createDefaultAdmin(db) {
+  async createDefaultAdmin() {
     const bcrypt = require('bcryptjs');
     const username = config.admin.username;
     const password = config.admin.password;
     const passwordHash = bcrypt.hashSync(password, 10);
 
+    const dbType = this.config.type.toLowerCase();
+    const insertIgnoreSql = dbType === 'mysql' ? 'INSERT IGNORE' : 'INSERT OR IGNORE';
+
     try {
-      await this.runQuery(db,
-        'INSERT OR IGNORE INTO admins (username, password_hash, role, permissions) VALUES (?, ?, ?, ?)',
+      await this.adapter.run(
+        `${insertIgnoreSql} INTO admins (username, password_hash, role, permissions) VALUES (?, ?, ?, ?)`,
         [username, passwordHash, 'admin', JSON.stringify(['all'])]
       );
       logger.info('默认管理员创建完成', { username });
@@ -139,26 +168,7 @@ class DatabaseInitializer {
     }
   }
 
-  async createDefaultCategories(db) {
-    const defaultCategories = [
-      { name: '游戏充值', description: '各类游戏充值卡', icon: '🎮', sort_order: 1 },
-      { name: '软件激活', description: '软件激活码', icon: '💻', sort_order: 2 },
-      { name: '会员服务', description: '各类会员卡', icon: '👑', sort_order: 3 }
-    ];
 
-    for (const category of defaultCategories) {
-      try {
-        await this.runQuery(db,
-          'INSERT OR IGNORE INTO categories (name, description, icon, sort_order) VALUES (?, ?, ?, ?)',
-          [category.name, category.description, category.icon, category.sort_order]
-        );
-      } catch (error) {
-        logger.warn('插入默认分类失败', { name: category.name, error: error.message });
-      }
-    }
-
-    logger.info('默认分类创建完成');
-  }
 }
 
 // 如果直接运行此文件，则执行初始化

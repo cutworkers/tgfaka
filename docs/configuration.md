@@ -21,7 +21,48 @@ PORT=3000                   # 应用端口
 LOG_LEVEL=info              # 日志级别: error, warn, info, debug
 
 # 数据库配置
+DATABASE_TYPE=sqlite                    # 数据库类型: sqlite, mysql
 DATABASE_PATH=./database/production.db  # SQLite数据库文件路径
+
+# MySQL数据库配置 (当DATABASE_TYPE=mysql时使用)
+MYSQL_HOST=localhost                    # MySQL服务器地址
+MYSQL_PORT=3306                        # MySQL端口
+MYSQL_DATABASE=telegram_shop            # 数据库名称
+MYSQL_USERNAME=root                     # 用户名
+MYSQL_PASSWORD=your_mysql_password      # 密码
+MYSQL_CHARSET=utf8mb4                   # 字符集
+MYSQL_TIMEZONE=+08:00                   # 时区
+MYSQL_CONNECTION_LIMIT=10               # 连接池最大连接数
+```
+
+### 数据库选择指南
+
+#### SQLite (默认)
+- **适用场景**: 小型部署、开发测试、单机应用
+- **优点**: 无需额外安装、配置简单、文件存储
+- **缺点**: 并发性能有限、不支持分布式
+
+#### MySQL
+- **适用场景**: 生产环境、高并发、分布式部署
+- **优点**: 高性能、支持集群、事务完整性好
+- **缺点**: 需要额外安装配置MySQL服务器
+
+#### 配置示例
+
+**SQLite配置**:
+```bash
+DATABASE_TYPE=sqlite
+DATABASE_PATH=./database/shop.db
+```
+
+**MySQL配置**:
+```bash
+DATABASE_TYPE=mysql
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_DATABASE=telegram_shop
+MYSQL_USERNAME=shop_user
+MYSQL_PASSWORD=secure_password
 ```
 
 ### Telegram Bot配置

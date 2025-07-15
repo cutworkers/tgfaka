@@ -15,6 +15,18 @@ class BotService {
       this.bot = null;
       return;
     }
+    
+    // 检测是否在Passenger环境中运行
+    const isPassengerEnv = process.env.PASSENGER_ENV === 'true' || 
+                           process.env.PASSENGER_BASE_URI !== undefined;
+    
+    logger.info('Bot初始化环境', {
+      isPassengerEnv,
+      webhookUrl: config.bot.webhookUrl,
+      proxy: config.bot.proxy
+    });
+    
+    // 初始化Bot
     if (config.bot.proxy === 'none') {
       this.bot = new Telegraf(config.bot.token);
     } else {
@@ -267,8 +279,24 @@ class BotService {
           break;
       }
     } catch (error) {
-      logger.error('处理订单操作失败', { error: error.message, data });
-      await ctx.reply('操作失败，请稍后再试');
+      logger.error('处理订单操作失败', { error: error.message, data, orderId });
+
+      // 在回调查询上下文中使用answerCbQuery
+      await ctx.answerCbQuery('操作失败，请稍后再试');
+
+      // 尝试编辑消息显示错误信息
+      try {
+        await ctx.editMessageText('❌ 操作失败，请稍后再试。', {
+          reply_markup: {
+            inline_keyboard: [[
+              Markup.button.callback('📋 返回订单列表', 'orders_page_1'),
+              Markup.button.callback('🏠 主菜单', 'main_menu')
+            ]]
+          }
+        });
+      } catch (editError) {
+        logger.error('编辑错误消息失败', { error: editError.message });
+      }
     }
   }
 
@@ -470,7 +498,23 @@ class BotService {
       });
     } catch (error) {
       logger.error('显示订单详情失败', { error: error.message, orderId });
-      await ctx.reply('获取订单详情失败，请稍后再试');
+
+      // 在回调查询上下文中，应该使用answerCbQuery而不是reply
+      await ctx.answerCbQuery('获取订单详情失败，请稍后再试');
+
+      // 尝试编辑消息显示错误信息
+      try {
+        await ctx.editMessageText('❌ 获取订单详情失败，请稍后再试。', {
+          reply_markup: {
+            inline_keyboard: [[
+              Markup.button.callback('📋 返回订单列表', 'orders_page_1'),
+              Markup.button.callback('🏠 主菜单', 'main_menu')
+            ]]
+          }
+        });
+      } catch (editError) {
+        logger.error('编辑错误消息失败', { error: editError.message });
+      }
     }
   }
 
@@ -736,17 +780,33 @@ class BotService {
     }
 
     try {
-      if (config.system.nodeEnv === 'production' && config.bot.webhookUrl) {
-        // 生产环境使用Webhook
+      // 检测是否在Passenger环境中运行
+      const isPassengerEnv = process.env.PASSENGER_ENV === 'true' || 
+                             process.env.PASSENGER_BASE_URI !== undefined;
+      
+      // 确保webhook URL已配置
+      if (!config.bot.webhookUrl) {
+        logger.error('Bot webhook URL未配置，无法启动webhook模式');
+        if (isPassengerEnv) {
+          logger.error('在Passenger环境中运行需要配置webhook URL');
+          return;
+        }
+      }
+      
+      if ((config.system.nodeEnv === 'production' || isPassengerEnv) && config.bot.webhookUrl) {
+        // 生产环境或Passenger环境使用Webhook
         await this.bot.telegram.setWebhook(config.bot.webhookUrl);
-        logger.info('Bot Webhook设置成功', { url: config.bot.webhookUrl });
+        logger.info('Bot Webhook设置成功', { 
+          url: config.bot.webhookUrl,
+          isPassengerEnv
+        });
       } else {
         // 开发环境使用长轮询
         await this.bot.launch();
         logger.info('Bot长轮询启动成功');
       }
     } catch (error) {
-      logger.error('Bot启动失败', { error: error.message });
+      logger.error('Bot启动失败', { error: error.message, stack: error.stack });
       throw error;
     }
   }
@@ -767,10 +827,12 @@ class BotService {
 
     logger.info('Bot webhook回调已配置', {
       botExists: !!this.bot,
-      botToken: this.bot.token ? `${this.bot.token.substring(0, 10)}...` : 'none'
+      botToken: this.bot.token ? `${this.bot.token.substring(0, 10)}...` : 'none',
+      isPassengerEnv: process.env.PASSENGER_ENV === 'true' || 
+                      process.env.PASSENGER_BASE_URI !== undefined
     });
 
-    // 创建webhook回调（不传递路径参数）
+    // 创建webhook回调
     const originalCallback = this.bot.webhookCallback();
 
     return (req, res, next) => {
@@ -805,3 +867,4 @@ class BotService {
 }
 
 module.exports = new BotService();
+

@@ -10,7 +10,23 @@ module.exports = {
 
   // 数据库配置
   database: {
+    type: process.env.DATABASE_TYPE || 'sqlite', // 数据库类型: sqlite, mysql
+    // SQLite配置
     path: process.env.DATABASE_PATH || './database/shop.db',
+    // MySQL配置
+    mysql: {
+      host: process.env.MYSQL_HOST || 'localhost',
+      port: parseInt(process.env.MYSQL_PORT) || 3306,
+      database: process.env.MYSQL_DATABASE || 'telegram_shop',
+      username: process.env.MYSQL_USERNAME || 'root',
+      password: process.env.MYSQL_PASSWORD || '',
+      charset: process.env.MYSQL_CHARSET || 'utf8mb4',
+      timezone: process.env.MYSQL_TIMEZONE || '+08:00',
+      connectionLimit: parseInt(process.env.MYSQL_CONNECTION_LIMIT) || 10,
+      acquireTimeout: 60000,
+      timeout: 60000,
+      reconnect: true
+    }
   },
 
   // Web服务配置

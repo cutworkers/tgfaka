@@ -113,7 +113,47 @@ nano .env
 # 或使用其他编辑器：vim .env, code .env
 ```
 
-### 4. 初始化数据库
+### 4. 数据库准备
+
+#### 使用SQLite (默认)
+无需额外配置，直接进行下一步。
+
+#### 使用MySQL
+如果选择使用MySQL，需要先安装并配置MySQL服务器：
+
+```bash
+# Ubuntu/Debian
+sudo apt update
+sudo apt install mysql-server
+
+# CentOS/RHEL
+sudo yum install mysql-server
+
+# macOS (使用Homebrew)
+brew install mysql
+
+# Windows
+# 下载并安装MySQL Community Server
+```
+
+创建数据库和用户：
+```sql
+-- 登录MySQL
+mysql -u root -p
+
+-- 创建数据库
+CREATE DATABASE telegram_shop CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- 创建用户并授权
+CREATE USER 'shop_user'@'localhost' IDENTIFIED BY 'secure_password';
+GRANT ALL PRIVILEGES ON telegram_shop.* TO 'shop_user'@'localhost';
+FLUSH PRIVILEGES;
+
+-- 退出
+EXIT;
+```
+
+### 5. 初始化数据库
 ```bash
 # 创建数据库表结构
 npm run db:init
@@ -122,7 +162,7 @@ npm run db:init
 npm run db:seed
 ```
 
-### 5. 验证安装
+### 6. 验证安装
 ```bash
 # 运行健康检查
 npm run test:basic
@@ -141,8 +181,16 @@ npm run dev
 # Telegram Bot Token（必需）
 BOT_TOKEN=your_telegram_bot_token_here
 
-# 数据库路径
-DATABASE_PATH=./database/production.db
+# 数据库配置
+DATABASE_TYPE=sqlite  # 或 mysql
+DATABASE_PATH=./database/production.db  # SQLite使用
+
+# MySQL配置 (如果使用MySQL)
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_DATABASE=telegram_shop
+MYSQL_USERNAME=shop_user
+MYSQL_PASSWORD=secure_password
 
 # 管理员账户
 ADMIN_USERNAME=admin

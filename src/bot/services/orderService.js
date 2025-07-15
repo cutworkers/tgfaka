@@ -214,10 +214,36 @@ class OrderService {
       }
 
       const orderData = order.toJSON();
-      
+
+      // 获取商品信息
+      try {
+        const product = await Product.findById(order.product_id);
+        if (product) {
+          orderData.product_name = product.name;
+          orderData.product_description = product.description;
+        } else {
+          orderData.product_name = '商品已下架';
+        }
+      } catch (productError) {
+        logger.warn('获取订单商品信息失败', {
+          error: productError.message,
+          orderId,
+          productId: order.product_id
+        });
+        orderData.product_name = '未知商品';
+      }
+
       // 如果订单已完成，获取卡密信息
       if (order.status === 'completed') {
-        orderData.cards = await order.getCards();
+        try {
+          orderData.cards = await order.getCards();
+        } catch (cardError) {
+          logger.warn('获取订单卡密信息失败', {
+            error: cardError.message,
+            orderId
+          });
+          orderData.cards = [];
+        }
       }
 
       return orderData;
@@ -265,21 +291,34 @@ class OrderService {
   getOrderDetailKeyboard(order) {
     const buttons = [];
 
-    if (order.status === 'pending' && !order.isExpired()) {
+    // 检查订单是否过期
+    const isExpired = order.expire_at && new Date(order.expire_at) < new Date();
+
+    if (order.status === 'pending' && !isExpired) {
       // 支付按钮
       if (order.payment_method === 'usdt') {
         buttons.push([
-          Markup.button.callback('💰 USDT支付', `payment_${order.id}_usdt`)
+          Markup.button.callback('💰 继续USDT支付', `payment_create_${order.product_id}_${order.quantity}_usdt`)
         ]);
       } else if (order.payment_method === 'alipay') {
         buttons.push([
-          Markup.button.callback('💰 支付宝支付', `payment_${order.id}_alipay`)
+          Markup.button.callback('💰 继续支付宝支付', `payment_create_${order.product_id}_${order.quantity}_alipay`)
         ]);
       }
+
+      // 检查支付状态按钮
+      buttons.push([
+        Markup.button.callback('🔄 检查支付状态', `payment_check_${order.order_no}`)
+      ]);
 
       // 取消订单按钮
       buttons.push([
         Markup.button.callback('❌ 取消订单', `order_${order.id}_cancel`)
+      ]);
+    } else if (order.status === 'pending' && isExpired) {
+      // 订单已过期，显示重新下单按钮
+      buttons.push([
+        Markup.button.callback('🔄 重新下单', `product_${order.product_id}_buy`)
       ]);
     }
 
@@ -295,11 +334,17 @@ class OrderService {
   // 格式化订单信息
   formatOrderInfo(order, detailed = false) {
     const statusEmoji = this.getStatusEmoji(order.status);
-    const statusText = this.getStatusText(order.status);
-    
+    let statusText = this.getStatusText(order.status);
+
+    // 检查订单是否过期
+    const isExpired = order.expire_at && new Date(order.expire_at) < new Date();
+    if (order.status === 'pending' && isExpired) {
+      statusText = '已过期';
+    }
+
     let message = `📋 **订单详情**\n\n`;
     message += `🆔 订单号: \`${order.order_no}\`\n`;
-    message += `📦 商品: ${order.product_name}\n`;
+    message += `📦 商品: ${order.product_name || '未知商品'}\n`;
     message += `🔢 数量: ${order.quantity}张\n`;
     message += `💰 金额: ¥${order.total_amount}\n`;
     message += `💳 支付方式: ${this.getPaymentMethodText(order.payment_method)}\n`;
@@ -316,7 +361,11 @@ class OrderService {
       }
 
       if (order.expire_at && order.status === 'pending') {
-        message += `⏰ 过期时间: ${this.formatDate(order.expire_at)}\n`;
+        if (isExpired) {
+          message += `⏰ 已于 ${this.formatDate(order.expire_at)} 过期\n`;
+        } else {
+          message += `⏰ 过期时间: ${this.formatDate(order.expire_at)}\n`;
+        }
       }
 
       if (order.paid_at) {

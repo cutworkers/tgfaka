@@ -1,42 +1,32 @@
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
-const fs = require('fs');
 const config = require('../config');
 const logger = require('../utils/logger');
+const DatabaseFactory = require('./adapters/DatabaseFactory');
 const DatabaseInitializer = require('./init');
 
 class DatabaseService {
   constructor() {
-    this.db = null;
-    this.dbPath = config.database.path;
+    this.adapter = null;
+    this.config = config.database;
   }
 
   async init() {
     try {
-      // 确保数据库目录存在
-      const dbDir = path.dirname(this.dbPath);
-      if (!fs.existsSync(dbDir)) {
-        fs.mkdirSync(dbDir, { recursive: true });
-      }
+      // 验证数据库配置
+      DatabaseFactory.validateConfig(this.config);
 
-      // 检查数据库文件是否存在，如果不存在则初始化
-      if (!fs.existsSync(this.dbPath)) {
-        logger.info('数据库文件不存在，开始初始化...');
+      // 创建数据库适配器
+      this.adapter = DatabaseFactory.createAdapter(this.config);
+
+      // 检查是否需要初始化数据库
+      const needsInit = await this.checkNeedsInitialization();
+      if (needsInit) {
+        logger.info('数据库需要初始化...');
         const initializer = new DatabaseInitializer();
         await initializer.init();
       }
 
-      // 连接数据库
-      this.db = new sqlite3.Database(this.dbPath, (err) => {
-        if (err) {
-          logger.error('数据库连接失败', { error: err.message });
-          throw err;
-        }
-        logger.info('数据库连接成功', { path: this.dbPath });
-      });
-
-      // 启用外键约束
-      this.db.run('PRAGMA foreign_keys = ON');
+      // 初始化数据库连接
+      await this.adapter.init();
 
     } catch (error) {
       logger.error('数据库初始化失败', { error: error.message });
@@ -44,90 +34,116 @@ class DatabaseService {
     }
   }
 
-  // 通用查询方法
-  query(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      this.db.all(sql, params, (err, rows) => {
-        if (err) {
-          logger.error('数据库查询失败', { sql, error: err.message });
-          reject(err);
-        } else {
-          resolve(rows);
-        }
-      });
-    });
-  }
+  /**
+   * 检查是否需要初始化数据库
+   */
+  async checkNeedsInitialization() {
+    const dbType = this.config.type.toLowerCase();
 
-  // 通用执行方法
-  run(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      this.db.run(sql, params, function(err) {
-        if (err) {
-          logger.error('数据库执行失败', { sql, error: err.message });
-          reject(err);
-        } else {
-          resolve({ id: this.lastID, changes: this.changes });
-        }
-      });
-    });
-  }
+    if (dbType === 'sqlite') {
+      const fs = require('fs');
+      return !fs.existsSync(this.config.path);
+    } else if (dbType === 'mysql') {
+      // 对于MySQL，尝试连接并检查表是否存在
+      try {
+        const tempAdapter = DatabaseFactory.createAdapter(this.config);
+        await tempAdapter.init();
 
-  // 获取单条记录
-  get(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      this.db.get(sql, params, (err, row) => {
-        if (err) {
-          logger.error('数据库查询失败', { sql, error: err.message });
-          reject(err);
-        } else {
-          resolve(row);
-        }
-      });
-    });
-  }
+        // 检查是否存在users表
+        const result = await tempAdapter.query(
+          "SELECT COUNT(*) as count FROM information_schema.tables WHERE table_schema = ? AND table_name = 'users'",
+          [this.config.mysql.database]
+        );
 
-  // 事务处理
-  async transaction(callback) {
-    return new Promise((resolve, reject) => {
-      this.db.serialize(() => {
-        this.db.run('BEGIN TRANSACTION');
+        await tempAdapter.close();
+        return result[0].count === 0;
+      } catch (error) {
+        // 如果连接失败或表不存在，需要初始化
+        return true;
+      }
+    }
 
-        callback(this.db)
-          .then((result) => {
-            this.db.run('COMMIT', (err) => {
-              if (err) {
-                reject(err);
-              } else {
-                resolve(result);
-              }
-            });
-          })
-          .catch((error) => {
-            this.db.run('ROLLBACK', () => {
-              reject(error);
-            });
-          });
-      });
-    });
-  }
-
-  getDatabase() {
-    return this.db;
+    return false;
   }
 
   async close() {
-    if (this.db) {
-      return new Promise((resolve) => {
-        this.db.close((err) => {
-          if (err) {
-            logger.error('数据库关闭失败', { error: err.message });
-          } else {
-            logger.info('数据库连接已关闭');
-          }
-          resolve();
-        });
-      });
+    if (this.adapter) {
+      await this.adapter.close();
+      this.adapter = null;
     }
+  }
+
+  async query(sql, params = []) {
+    if (!this.adapter) {
+      throw new Error('数据库未初始化');
+    }
+    return this.adapter.query(sql, params);
+  }
+
+  async get(sql, params = []) {
+    if (!this.adapter) {
+      throw new Error('数据库未初始化');
+    }
+    return this.adapter.get(sql, params);
+  }
+
+  async run(sql, params = []) {
+    if (!this.adapter) {
+      throw new Error('数据库未初始化');
+    }
+    return this.adapter.run(sql, params);
+  }
+
+  async beginTransaction() {
+    if (!this.adapter) {
+      throw new Error('数据库未初始化');
+    }
+    return this.adapter.beginTransaction();
+  }
+
+  async commit() {
+    if (!this.adapter) {
+      throw new Error('数据库未初始化');
+    }
+    return this.adapter.commit();
+  }
+
+  async rollback() {
+    if (!this.adapter) {
+      throw new Error('数据库未初始化');
+    }
+    return this.adapter.rollback();
+  }
+
+  async transaction(callback) {
+    if (!this.adapter) {
+      throw new Error('数据库未初始化');
+    }
+
+    try {
+      await this.beginTransaction();
+      const result = await callback(this);
+      await this.commit();
+      return result;
+    } catch (error) {
+      await this.rollback();
+      throw error;
+    }
+  }
+
+  getDatabase() {
+    return this.adapter ? this.adapter.getConnection() : null;
+  }
+
+  async isConnected() {
+    if (!this.adapter) {
+      return false;
+    }
+    return this.adapter.isConnected();
+  }
+
+  getDatabaseType() {
+    return this.config.type;
   }
 }
 

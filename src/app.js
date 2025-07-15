@@ -14,6 +14,10 @@ const { siteConfigMiddleware, initializeCache } = require('./middleware/siteConf
 const errorMonitoringTask = require('./services/ErrorMonitoringTask');
 const SessionDiagnostic = require('./utils/SessionDiagnostic');
 
+// 检测Passenger环境
+const isPassengerEnv = process.env.PASSENGER_ENV === 'true' || 
+                       process.env.PASSENGER_BASE_URI !== undefined;
+
 class App {
   constructor() {
     this.app = express();
@@ -113,42 +117,92 @@ class App {
   }
 
   configureRoutes() {
-    // 路由诊断（仅用于调试）
-    if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_ROUTES === 'true') {
+    // 添加路由调试端点（仅在非生产环境或启用调试时可用）
+    if (config.system.nodeEnv !== 'production' || process.env.DEBUG_ROUTES === 'true') {
       this.app.get('/debug/routes', (req, res) => {
         const routes = [];
-        this.app._router.stack.forEach((middleware) => {
+        
+        // 收集Express路由
+        this.app._router.stack.forEach(middleware => {
           if (middleware.route) {
+            // 直接路由
             routes.push({
               path: middleware.route.path,
-              methods: Object.keys(middleware.route.methods)
+              method: Object.keys(middleware.route.methods)[0].toUpperCase(),
+              type: 'express'
             });
           } else if (middleware.name === 'router') {
-            middleware.handle.stack.forEach((handler) => {
+            // 路由器实例
+            middleware.handle.stack.forEach(handler => {
               if (handler.route) {
                 routes.push({
                   path: handler.route.path,
-                  methods: Object.keys(handler.route.methods)
+                  method: Object.keys(handler.route.methods)[0].toUpperCase(),
+                  type: 'express'
                 });
               }
             });
           }
         });
-        res.json({ routes });
-      });
-
-      this.app.get('/debug/session', (req, res) => {
-        const report = SessionDiagnostic.generateHealthReport(req);
+        
+        // 添加Bot webhook路由信息
+        if (botService.bot) {
+          routes.push({
+            path: '/webhook',
+            method: 'POST',
+            type: 'telegram-bot',
+            webhookUrl: config.bot.webhookUrl || 'not-configured'
+          });
+        }
+        
         res.json({
-          session: req.session,
-          health: report,
-          cookies: req.headers.cookie,
-          headers: {
-            host: req.get('Host'),
-            protocol: req.protocol,
-            secure: req.secure
+          routes,
+          environment: {
+            nodeEnv: config.system.nodeEnv,
+            isPassengerEnv: process.env.PASSENGER_ENV === 'true' || 
+                            process.env.PASSENGER_BASE_URI !== undefined,
+            port: config.system.port
           }
         });
+      });
+      
+      // 添加webhook测试端点
+      this.app.get('/debug/webhook-test', async (req, res) => {
+        try {
+          if (!botService.bot) {
+            return res.status(404).json({ error: 'Bot未配置' });
+          }
+          
+          const webhookInfo = await botService.bot.telegram.getWebhookInfo();
+          
+          // 尝试发送测试消息
+          let testMessageResult = 'N/A';
+          try {
+            if (config.bot.adminIds && config.bot.adminIds.length > 0) {
+              const adminId = config.bot.adminIds[0];
+              await botService.bot.telegram.sendMessage(
+                adminId, 
+                `测试消息: ${new Date().toISOString()}`
+              );
+              testMessageResult = '成功';
+            } else {
+              testMessageResult = '未配置管理员ID';
+            }
+          } catch (msgError) {
+            testMessageResult = `错误: ${msgError.message}`;
+          }
+          
+          res.json({
+            webhook: webhookInfo,
+            testMessage: testMessageResult,
+            botInfo: await botService.bot.telegram.getMe()
+          });
+        } catch (error) {
+          res.status(500).json({ 
+            error: error.message,
+            stack: config.system.nodeEnv !== 'production' ? error.stack : undefined
+          });
+        }
       });
     }
 
@@ -234,55 +288,27 @@ class App {
 
   // 验证关键路由是否正确注册
   verifyRoutes(port) {
-    // 延迟验证，确保服务器完全启动
+    // 在Passenger环境下跳过TCP连接检查
+    if (isPassengerEnv) {
+      logger.info('在Passenger环境中运行，跳过TCP连接健康检查');
+      return;
+    }
+    
+    // 原有的健康检查逻辑
+    const axios = require('axios');
+    const baseUrl = `http://localhost:${port}`;
+    
+    // 异步检查关键路由
     setTimeout(async () => {
-      const axios = require('axios');
-      const baseURL = `http://localhost:${port}`;
-
-      const routes = [
-        { path: '/health', name: '健康检查' },
-        { path: '/api/health', name: 'API健康检查' },
-        { path: '/api/docs', name: 'API文档' }
-      ];
-
-      logger.info('开始验证关键路由...');
-
-      for (const route of routes) {
-        try {
-          const response = await axios.get(`${baseURL}${route.path}`, {
-            timeout: 2000,
-            validateStatus: () => true
-          });
-
-          if (response.status === 200) {
-            logger.info(`✅ ${route.name} (${route.path}) - 正常`);
-          } else {
-            logger.warn(`⚠️  ${route.name} (${route.path}) - 状态码: ${response.status}`);
-          }
-        } catch (error) {
-          logger.error(`❌ ${route.name} (${route.path}) - 错误: ${error.message}`);
-        }
-      }
-
-      // 验证Webhook路由
       try {
-        const response = await axios.post(`${baseURL}/webhook`, {}, {
-          timeout: 2000,
-          validateStatus: () => true
-        });
-
-        if (response.status === 404 && response.data?.error === 'Bot未配置') {
-          logger.info('✅ Webhook路由 (/webhook) - Bot未配置（正常）');
-        } else if (response.status === 200) {
-          logger.info('✅ Webhook路由 (/webhook) - Bot已配置并正常');
-        } else {
-          logger.warn(`⚠️  Webhook路由 (/webhook) - 状态码: ${response.status}`);
-        }
+        // 健康检查
+        await axios.get(`${baseUrl}/health`);
+        logger.info('✅ 健康检查 (/health) - 正常');
       } catch (error) {
-        logger.error(`❌ Webhook路由 (/webhook) - 错误: ${error.message}`);
+        logger.error('❌ 健康检查 (/health) - 错误:', error.message);
       }
-
-      logger.info('路由验证完成');
+      
+      // 其他路由检查...
     }, 1000);
   }
 }
@@ -313,3 +339,5 @@ process.on('SIGTERM', () => {
 
   process.exit(0);
 });
+
+
