@@ -31,6 +31,9 @@ class App {
       await databaseService.init();
       logger.info('数据库初始化完成');
 
+      // 验证关键配置
+      this.validateConfiguration();
+
       // 初始化站点配置缓存
       await initializeCache();
 
@@ -62,6 +65,37 @@ class App {
     } catch (error) {
       logger.error('应用启动失败', { error: error.message });
       process.exit(1);
+    }
+  }
+
+  // 验证关键配置
+  validateConfiguration() {
+    // 检查USDT配置
+    if (config.usdt.apiKey === 'your_tron_api_key' || !config.usdt.apiKey) {
+      logger.warn('USDT API密钥未配置', {
+        message: '请在.env文件中设置TRON_API_KEY以启用USDT支付功能'
+      });
+    }
+
+    if (config.usdt.walletAddress === 'your_usdt_wallet_address' || !config.usdt.walletAddress) {
+      logger.warn('USDT钱包地址未配置', {
+        message: '请在.env文件中设置USDT_WALLET_ADDRESS以启用USDT支付功能'
+      });
+    }
+
+    // 检查数据库配置
+    if (config.database.type === 'mysql') {
+      logger.warn('当前配置使用MySQL数据库，但生产环境推荐使用SQLite', {
+        current: config.database.type,
+        recommended: 'sqlite'
+      });
+    }
+
+    // 检查会话密钥
+    if (config.server.sessionSecret === 'default_secret') {
+      logger.warn('使用默认会话密钥，建议在生产环境中更改', {
+        message: '请在.env文件中设置SESSION_SECRET以提高安全性'
+      });
     }
   }
 

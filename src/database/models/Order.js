@@ -128,8 +128,8 @@ class Order {
     expireAt.setMinutes(expireAt.getMinutes() + (orderData.timeout_minutes || 30));
 
     const result = await databaseService.run(
-      `INSERT INTO orders (order_no, user_id, product_id, quantity, unit_price, 
-                          total_amount, payment_method, payment_address, payment_amount, 
+      `INSERT INTO orders (order_no, user_id, product_id, quantity, unit_price,
+                          total_amount, payment_method, payment_address, payment_amount,
                           expire_at, notes)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
@@ -146,8 +146,16 @@ class Order {
         orderData.notes
       ]
     );
-    
-    return await Order.findById(result.id);
+
+    // 检查插入结果
+    if (!result || (!result.lastID && !result.insertId)) {
+      throw new Error('订单创建失败：无法获取插入的订单ID');
+    }
+
+    // 获取插入的ID（兼容SQLite和MySQL）
+    const insertedId = result.lastID || result.insertId;
+
+    return await Order.findById(insertedId);
   }
 
   // 更新订单状态
@@ -283,14 +291,16 @@ class Order {
 
   // 批量更新过期订单
   static async updateExpiredOrders() {
+    const now = new Date().toISOString();
     const result = await databaseService.run(
-      `UPDATE orders 
-       SET status = 'expired', updated_at = CURRENT_TIMESTAMP 
-       WHERE status = 'pending' 
-         AND expire_at < datetime('now')`
+      `UPDATE orders
+       SET status = 'expired', updated_at = CURRENT_TIMESTAMP
+       WHERE status = 'pending'
+         AND expire_at < ?`,
+      [now]
     );
-    
-    return result.changes;
+
+    return result.changes || 0;
   }
 
   // 获取待支付订单数量

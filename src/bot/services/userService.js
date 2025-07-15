@@ -74,8 +74,19 @@ class UserService {
 
   // 根据Telegram ID获取用户ID
   async getUserId(telegramId) {
-    const user = await this.getUser(telegramId);
-    return user.id;
+    try {
+      const user = await this.getUser(telegramId);
+      if (!user || !user.id) {
+        throw new Error('用户ID获取失败');
+      }
+      return user.id;
+    } catch (error) {
+      logger.error('获取用户ID失败', {
+        error: error.message,
+        telegramId
+      });
+      throw error;
+    }
   }
 
   // 获取用户统计信息

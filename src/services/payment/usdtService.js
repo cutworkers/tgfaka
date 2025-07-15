@@ -9,9 +9,35 @@ class USDTService {
     this.walletAddress = config.usdt.walletAddress;
     this.contractAddress = config.usdt.contractAddress;
     this.network = config.usdt.network;
-    this.baseUrl = this.network === 'mainnet' 
-      ? 'https://api.trongrid.io' 
+    this.baseUrl = this.network === 'mainnet'
+      ? 'https://api.trongrid.io'
       : 'https://api.shasta.trongrid.io';
+
+    // 验证配置
+    this.isConfigured = this.validateConfig();
+  }
+
+  // 验证USDT配置
+  validateConfig() {
+    const missingConfigs = [];
+
+    if (!this.apiKey || this.apiKey === 'your_tron_api_key') {
+      missingConfigs.push('TRON_API_KEY');
+    }
+
+    if (!this.walletAddress || this.walletAddress === 'your_usdt_wallet_address') {
+      missingConfigs.push('USDT_WALLET_ADDRESS');
+    }
+
+    if (missingConfigs.length > 0) {
+      logger.warn('USDT配置不完整', {
+        missing: missingConfigs,
+        message: '请在.env文件中配置正确的USDT参数'
+      });
+      return false;
+    }
+
+    return true;
   }
 
   // 获取USDT汇率
@@ -68,6 +94,14 @@ class USDTService {
   // 获取交易记录
   async getTransactions(limit = 50, fingerprint = '') {
     try {
+      // 检查配置是否完整
+      if (!this.isConfigured) {
+        logger.error('获取交易记录失败', {
+          error: 'USDT配置不完整，请检查.env文件中的TRON_API_KEY和USDT_WALLET_ADDRESS配置'
+        });
+        return [];
+      }
+
       const params = {
         limit,
         contract_address: this.contractAddress
@@ -90,11 +124,19 @@ class USDTService {
       if (response.data.success) {
         return response.data.data || [];
       }
-      
+
       throw new Error('获取交易记录失败');
     } catch (error) {
-      logger.error('获取交易记录失败', { error: error.message });
-      throw error;
+      // 处理401未授权错误
+      if (error.response && error.response.status === 401) {
+        logger.error('获取交易记录失败', {
+          error: 'API密钥无效或已过期，请更新TRON_API_KEY配置',
+          status: 401
+        });
+      } else {
+        logger.error('获取交易记录失败', { error: error.message });
+      }
+      return [];
     }
   }
 
@@ -135,21 +177,35 @@ class USDTService {
   async monitorPayments() {
     try {
       logger.info('开始监控USDT支付');
-      
+
+      // 检查配置是否完整
+      if (!this.isConfigured) {
+        logger.warn('USDT支付监控跳过', {
+          reason: 'USDT配置不完整，请检查.env文件中的TRON_API_KEY和USDT_WALLET_ADDRESS配置'
+        });
+        return;
+      }
+
       // 获取待支付的USDT订单
       const pendingOrders = await this.getPendingUSDTOrders();
-      
+
       if (pendingOrders.length === 0) {
         return;
       }
 
       // 获取最新交易记录
       const transactions = await this.getTransactions(100);
-      
+
+      // 如果获取交易记录失败，提前返回
+      if (!transactions || transactions.length === 0) {
+        logger.warn('USDT支付监控无法获取交易记录，跳过本次检查');
+        return;
+      }
+
       for (const order of pendingOrders) {
         await this.checkOrderPayment(order, transactions);
       }
-      
+
     } catch (error) {
       logger.error('监控USDT支付失败', { error: error.message });
     }

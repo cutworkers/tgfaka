@@ -215,15 +215,17 @@ class Card {
 
   // 批量更新过期卡密
   static async updateExpiredCards() {
+    const now = new Date().toISOString();
     const result = await databaseService.run(
-      `UPDATE cards 
-       SET status = 'expired', updated_at = CURRENT_TIMESTAMP 
-       WHERE status = 'available' 
-         AND expire_at IS NOT NULL 
-         AND expire_at < datetime('now')`
+      `UPDATE cards
+       SET status = 'expired', updated_at = CURRENT_TIMESTAMP
+       WHERE status = 'available'
+         AND expire_at IS NOT NULL
+         AND expire_at < ?`,
+      [now]
     );
-    
-    return result.changes;
+
+    return result.changes || 0;
   }
 
   // 根据批次ID删除卡密

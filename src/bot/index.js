@@ -406,7 +406,23 @@ class BotService {
   // 创建支付订单
   async createPaymentOrder(ctx, productId, quantity, paymentMethod) {
     try {
-      const userId = await this.userService.getUserId(ctx.from.id);
+      // 参数验证
+      if (!productId || !quantity || !paymentMethod) {
+        throw new Error('参数不完整，请重新选择商品和支付方式');
+      }
+
+      // 获取用户ID
+      let userId;
+      try {
+        userId = await this.userService.getUserId(ctx.from.id);
+      } catch (userError) {
+        logger.error('获取用户ID失败', {
+          error: userError.message,
+          telegramId: ctx.from.id
+        });
+        await ctx.reply('用户信息获取失败，请重新开始对话或联系客服');
+        return;
+      }
 
       // 验证用户状态
       await this.userService.validateUserStatus(ctx.from.id);
@@ -414,11 +430,30 @@ class BotService {
       // 创建订单
       const order = await this.orderService.createOrder(userId, productId, quantity, paymentMethod);
 
+      if (!order || !order.id) {
+        throw new Error('订单创建失败，请稍后再试');
+      }
+
       // 显示支付信息
       await this.showPaymentInfo(ctx, order);
 
+      // 记录用户操作
+      this.userService.logUserAction(ctx.from.id, 'create_order', {
+        orderId: order.id,
+        productId,
+        quantity,
+        paymentMethod
+      });
+
     } catch (error) {
-      logger.error('创建支付订单失败', { error: error.message });
+      logger.error('创建支付订单失败', {
+        error: error.message,
+        stack: error.stack,
+        telegramId: ctx.from.id,
+        productId,
+        quantity,
+        paymentMethod
+      });
       await ctx.reply(`创建订单失败: ${error.message}`);
     }
   }
