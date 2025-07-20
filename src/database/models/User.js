@@ -42,11 +42,11 @@ class User {
        VALUES (?, ?, ?, ?, ?, ?)`,
       [
         userData.telegram_id,
-        userData.username,
-        userData.first_name,
-        userData.last_name,
-        userData.phone,
-        userData.email
+        userData.username   ?? null,
+        userData.first_name ?? null,
+        userData.last_name  ?? null,
+        userData.phone      ?? null,
+        userData.email      ?? null
       ]
     );
     

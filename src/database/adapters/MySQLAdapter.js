@@ -1,6 +1,7 @@
 const mysql = require('mysql2/promise');
 const BaseAdapter = require('./BaseAdapter');
 const logger = require('../../utils/logger');
+const fs = require('fs');
 
 /**
  * MySQL数据库适配器
@@ -24,6 +25,10 @@ class MySQLAdapter extends BaseAdapter {
         charset: this.config.charset,
         timezone: this.config.timezone,
         connectionLimit: this.config.connectionLimit,
+        ssl: this.config.ssl === 'true' ? {
+          minVersion: 'TLSv1.2',
+          ca: this.config.ca_path ? fs.readFileSync(this.config.ca_path) : undefined
+       } : null,
         // 连接池配置
         queueLimit: 0,
         acquireTimeout: 60000,

@@ -22,6 +22,8 @@ module.exports = {
       password: process.env.MYSQL_PASSWORD || '',
       charset: process.env.MYSQL_CHARSET || 'utf8mb4',
       timezone: process.env.MYSQL_TIMEZONE || '+08:00',
+      ssl: process.env.MYSQL_ENABLE_SSL || null,
+      ca_path: process.env.MYSQL_CA_PATH,
       connectionLimit: parseInt(process.env.MYSQL_CONNECTION_LIMIT) || 10,
       acquireTimeout: 60000,
       timeout: 60000,
