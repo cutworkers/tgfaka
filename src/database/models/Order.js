@@ -101,12 +101,10 @@ class Order {
 
     // 分页
     if (options.limit) {
-      sql += ' LIMIT ?';
-      params.push(options.limit);
+      sql += ' LIMIT ' + options.limit;
 
       if (options.offset) {
-        sql += ' OFFSET ?';
-        params.push(options.offset);
+        sql += ' OFFSET ' + options.offset;
       }
     }
 

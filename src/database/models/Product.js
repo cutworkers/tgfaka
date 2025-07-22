@@ -48,12 +48,10 @@ class Product {
     sql += ' ORDER BY p.sort_order ASC, p.created_at DESC';
 
     if (options.limit) {
-      sql += ' LIMIT ?';
-      params.push(options.limit);
+      sql += ' LIMIT ' + options.limit;
       
       if (options.offset) {
-        sql += ' OFFSET ?';
-        params.push(options.offset);
+        sql += ' OFFSET ' + options.offset;
       }
     }
 
@@ -167,8 +165,8 @@ class Product {
   // 获取商品的卡密列表
   async getCards(status = 'available', limit = 10, offset = 0) {
     return await databaseService.query(
-      'SELECT * FROM cards WHERE product_id = ? AND status = ? ORDER BY created_at ASC LIMIT ? OFFSET ?',
-      [this.id, status, limit, offset]
+      `SELECT * FROM cards WHERE product_id = ? AND status = ? ORDER BY created_at ASC LIMIT ${limit} OFFSET ${offset}`,
+      [this.id, status]
     );
   }
 

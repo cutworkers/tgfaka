@@ -8,6 +8,7 @@ const OrderController = require('./controllers/orderController');
 const ImportController = require('./controllers/importController');
 const PaymentController = require('./controllers/paymentController');
 const SystemConfigController = require('./controllers/systemConfigController');
+const UserController = require('./controllers/userController');
 
 // 导入中间件
 const { requestLogger, errorHandler, rateLimiter } = require('../middleware/auth');
@@ -50,6 +51,12 @@ router.get('/users/:user_id/orders', OrderController.getUserOrders);
 router.post('/orders', OrderController.createOrder);
 router.put('/orders/:id/status', OrderController.updateOrderStatus);
 router.delete('/orders/:id', OrderController.cancelOrder);
+
+// 用户相关路由
+router.get('/users', UserController.getUsers);
+router.get('/users/:id', UserController.getUserDetails);
+router.get('/users/:id/stats', UserController.getUserStats);
+router.put('/users/:id', UserController.updateUser);
 
 // 支付相关路由
 router.post('/payments/usdt/create', PaymentController.createUSDTPayment);
@@ -109,8 +116,13 @@ router.get('/docs', (req, res) => {
         'PUT /api/orders/:id/status': '更新订单状态',
         'DELETE /api/orders/:id': '取消订单'
       },
-      // 其他模块（待开发）
-      users: '/api/users'
+      // 用户管理
+      users: {
+        'GET /api/users': '获取用户列表',
+        'GET /api/users/:id': '获取用户详情及订单信息',
+        'GET /api/users/:id/stats': '获取用户统计信息',
+        'PUT /api/users/:id': '更新用户信息'
+      }
     }
   });
 });

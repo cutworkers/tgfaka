@@ -118,8 +118,8 @@ class User {
        LEFT JOIN products p ON o.product_id = p.id 
        WHERE o.user_id = ? 
        ORDER BY o.created_at DESC 
-       LIMIT ? OFFSET ?`,
-      [this.id, limit, offset]
+       LIMIT ${limit} OFFSET ${offset}`,
+      [this.id]
     );
   }
 

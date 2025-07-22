@@ -31,8 +31,6 @@ class MySQLAdapter extends BaseAdapter {
        } : null,
         // 连接池配置
         queueLimit: 0,
-        acquireTimeout: 60000,
-        timeout: 60000,
         // MySQL特定配置
         supportBigNumbers: true,
         bigNumberStrings: true,
