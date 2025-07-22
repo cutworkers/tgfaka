@@ -282,8 +282,8 @@ class AdminController {
         LEFT JOIN users u ON o.user_id = u.id
         ${whereClause}
         ORDER BY o.created_at DESC
-        LIMIT ? OFFSET ?
-      `, [...params, limit, offset]);
+        LIMIT ${limit} OFFSET ${offset}
+      `, [...params]);
 
       // 获取总数
       const totalResult = await databaseService.get(`
@@ -338,8 +338,8 @@ class AdminController {
         ${whereClause}
         GROUP BY u.id
         ORDER BY u.created_at DESC
-        LIMIT ? OFFSET ?
-      `, [...params, limit, offset]);
+        LIMIT ${limit} OFFSET ${offset}
+      `, [...params]);
 
       // 获取总数
       const totalResult = await databaseService.get(`

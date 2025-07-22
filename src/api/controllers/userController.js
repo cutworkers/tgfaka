@@ -103,7 +103,7 @@ class UserController {
       }
 
       // 添加排序和分页
-      query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+      query += ` ORDER BY created_at DESC LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}`;
       params.push(parseInt(limit), parseInt(offset));
 
       const users = await require('../../database/index').query(query, params);

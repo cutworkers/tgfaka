@@ -237,8 +237,7 @@ class OperationLogService {
       params.push(end_date);
     }
 
-    sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
-    params.push(limit, offset);
+    sql +=  ` ORDER BY created_at DESC LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}`;
 
     const logs = await databaseService.query(sql, params);
     
