@@ -479,11 +479,12 @@ class AdminController {
       paymentMethodQuery += ' GROUP BY payment_method';
 
       const paymentMethodStats = await databaseService.query(paymentMethodQuery, params);
-
+      const dbType = databaseService.getDatabaseType().toLowerCase();
+      let dateCondition = dbType == 'sqlite' ? 'date(created_at)' : `DATE_FORMAT(created_at, '%Y-%m-%d')`;
       // 每日销售统计
       let dailySalesQuery = `
         SELECT 
-          DATE(created_at) as date,
+          ${dateCondition} as date,
           COUNT(*) as order_count,
           SUM(total_amount) as revenue
         FROM orders 

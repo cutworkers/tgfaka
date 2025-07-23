@@ -49,7 +49,7 @@ class Product {
 
     if (options.limit) {
       sql += ' LIMIT ' + options.limit;
-      
+
       if (options.offset) {
         sql += ' OFFSET ' + options.offset;
       }
@@ -101,24 +101,24 @@ class Product {
   async update(updateData) {
     const fields = [];
     const values = [];
-    
+
     Object.keys(updateData).forEach(key => {
       if (updateData[key] !== undefined && key !== 'id') {
         fields.push(`${key} = ?`);
         values.push(updateData[key]);
       }
     });
-    
+
     if (fields.length === 0) return this;
-    
+
     fields.push('updated_at = CURRENT_TIMESTAMP');
     values.push(this.id);
-    
+
     await databaseService.run(
       `UPDATE products SET ${fields.join(', ')} WHERE id = ?`,
       values
     );
-    
+
     return await Product.findById(this.id);
   }
 
@@ -129,7 +129,7 @@ class Product {
       `UPDATE products SET stock_count = stock_count ${operator} ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
       [Math.abs(quantity), this.id]
     );
-    
+
     return await Product.findById(this.id);
   }
 
@@ -139,7 +139,7 @@ class Product {
       'UPDATE products SET sold_count = sold_count + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
       [quantity, this.id]
     );
-    
+
     return await Product.findById(this.id);
   }
 
@@ -172,6 +172,18 @@ class Product {
 
   // 获取商品销售统计
   async getSalesStats(days = 30) {
+    const dbType = databaseService.getDatabaseType().toLowerCase();
+    let dateCondition;
+
+    if (dbType === 'sqlite') {
+      dateCondition = `created_at >= datetime('now', '-${days} days')`;
+    } else if (dbType === 'mysql') {
+      dateCondition = `created_at >= DATE_SUB(NOW(), INTERVAL ${days} DAY)`;
+    } else {
+      // 默认使用标准SQL（适用于PostgreSQL等）
+      dateCondition = `created_at >= NOW() - INTERVAL '${days} days'`;
+    }
+
     const stats = await databaseService.get(
       `SELECT 
          COUNT(*) as total_orders,
@@ -181,10 +193,10 @@ class Product {
        FROM orders 
        WHERE product_id = ? 
          AND status = 'completed' 
-         AND created_at >= datetime('now', '-${days} days')`,
+         AND ${dateCondition}`,
       [this.id]
     );
-    
+
     return stats;
   }
 
@@ -195,14 +207,14 @@ class Product {
       'SELECT COUNT(*) as count FROM orders WHERE product_id = ?',
       [this.id]
     );
-    
+
     if (orderCount.count > 0) {
       throw new Error('无法删除有订单记录的商品');
     }
-    
+
     // 删除关联的卡密
     await databaseService.run('DELETE FROM cards WHERE product_id = ?', [this.id]);
-    
+
     // 删除商品
     await databaseService.run('DELETE FROM products WHERE id = ?', [this.id]);
   }
