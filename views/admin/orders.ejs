@@ -1,47 +1,56 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= title %> - <%= siteName %></title>
-    
+    <title>
+        <%= title %> - <%= siteName %>
+    </title>
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    
+
     <style>
         .sidebar {
             min-height: 100vh;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
+
         .sidebar .nav-link {
             color: rgba(255, 255, 255, 0.8);
             border-radius: 8px;
             margin: 2px 0;
             transition: all 0.3s;
         }
+
         .sidebar .nav-link:hover,
         .sidebar .nav-link.active {
             color: white;
             background-color: rgba(255, 255, 255, 0.1);
         }
+
         .card {
             border: none;
             border-radius: 12px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
+
         .table th {
             border-top: none;
             background-color: #f8f9fa;
             font-weight: 600;
         }
+
         .badge-status {
             font-size: 0.75rem;
             padding: 0.375rem 0.75rem;
         }
     </style>
 </head>
+
 <body class="bg-light">
     <div class="container-fluid">
         <div class="row">
@@ -55,16 +64,18 @@
                         </h5>
                         <small class="text-white-50">欢迎，<%= admin.username %></small>
                     </div>
-                    
+
                     <ul class="nav flex-column">
                         <li class="nav-item">
-                            <a class="nav-link <%= currentPage === 'dashboard' ? 'active' : '' %>" href="/admin/dashboard">
+                            <a class="nav-link <%= currentPage === 'dashboard' ? 'active' : '' %>"
+                                href="/admin/dashboard">
                                 <i class="fas fa-tachometer-alt me-2"></i>
                                 仪表板
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link <%= currentPage === 'products' ? 'active' : '' %>" href="/admin/products">
+                            <a class="nav-link <%= currentPage === 'products' ? 'active' : '' %>"
+                                href="/admin/products">
                                 <i class="fas fa-box me-2"></i>
                                 商品管理
                             </a>
@@ -94,7 +105,8 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link <%= currentPage === 'settings' ? 'active' : '' %>" href="/admin/settings">
+                            <a class="nav-link <%= currentPage === 'settings' ? 'active' : '' %>"
+                                href="/admin/settings">
                                 <i class="fas fa-cog me-2"></i>
                                 系统设置
                             </a>
@@ -111,7 +123,8 @@
 
             <!-- 主内容区 -->
             <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <div
+                    class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                     <h1 class="h2">
                         <i class="fas fa-shopping-cart me-2"></i>
                         订单管理
@@ -135,16 +148,20 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="btn-group" role="group">
-                                    <a href="/admin/orders" class="btn <%= !currentStatus ? 'btn-primary' : 'btn-outline-primary' %> btn-sm">
+                                    <a href="/admin/orders"
+                                        class="btn <%= !currentStatus ? 'btn-primary' : 'btn-outline-primary' %> btn-sm">
                                         全部
                                     </a>
-                                    <a href="/admin/orders?status=pending" class="btn <%= currentStatus === 'pending' ? 'btn-warning' : 'btn-outline-warning' %> btn-sm">
+                                    <a href="/admin/orders?status=pending"
+                                        class="btn <%= currentStatus === 'pending' ? 'btn-warning' : 'btn-outline-warning' %> btn-sm">
                                         待支付
                                     </a>
-                                    <a href="/admin/orders?status=completed" class="btn <%= currentStatus === 'completed' ? 'btn-success' : 'btn-outline-success' %> btn-sm">
+                                    <a href="/admin/orders?status=completed"
+                                        class="btn <%= currentStatus === 'completed' ? 'btn-success' : 'btn-outline-success' %> btn-sm">
                                         已完成
                                     </a>
-                                    <a href="/admin/orders?status=cancelled" class="btn <%= currentStatus === 'cancelled' ? 'btn-danger' : 'btn-outline-danger' %> btn-sm">
+                                    <a href="/admin/orders?status=cancelled"
+                                        class="btn <%= currentStatus === 'cancelled' ? 'btn-danger' : 'btn-outline-danger' %> btn-sm">
                                         已取消
                                     </a>
                                 </div>
@@ -172,125 +189,379 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <% if (orders && orders.length > 0) { %>
-                                        <% orders.forEach(order => { %>
+                                    <% if (orders && orders.length> 0) { %>
+                                        <% orders.forEach(order=> { %>
                                             <tr>
                                                 <td>
                                                     <code><%= order.order_no %></code>
                                                 </td>
                                                 <td>
                                                     <% if (order.username) { %>
-                                                        <div>@<%= order.username %></div>
+                                                        <div>@<%= order.username %>
+                                                        </div>
                                                         <small class="text-muted">ID: <%= order.telegram_id %></small>
-                                                    <% } else { %>
-                                                        <div>用户<%= order.telegram_id %></div>
-                                                    <% } %>
+                                                        <% } else { %>
+                                                            <div>用户<%= order.telegram_id %>
+                                                            </div>
+                                                            <% } %>
                                                 </td>
                                                 <td>
-                                                    <div><%= order.product_name %></div>
+                                                    <div>
+                                                        <%= order.product_name %>
+                                                    </div>
                                                     <small class="text-muted">ID: <%= order.product_id %></small>
                                                 </td>
-                                                <td><%= order.quantity %>张</td>
+                                                <td>
+                                                    <%= order.quantity %>张
+                                                </td>
                                                 <td>
                                                     <strong>¥<%= parseFloat(order.total_amount).toFixed(2) %></strong>
-                                                    <% if (order.unit_price !== order.total_amount) { %>
-                                                        <br><small class="text-muted">单价: ¥<%= parseFloat(order.unit_price).toFixed(2) %></small>
-                                                    <% } %>
+                                                    <% if (order.unit_price !==order.total_amount) { %>
+                                                        <br><small class="text-muted">单价: ¥<%=
+                                                                parseFloat(order.unit_price).toFixed(2) %></small>
+                                                        <% } %>
                                                 </td>
                                                 <td>
-                                                    <% if (order.payment_method === 'usdt') { %>
+                                                    <% if (order.payment_method==='usdt' ) { %>
                                                         <span class="badge bg-info">USDT</span>
-                                                    <% } else if (order.payment_method === 'alipay') { %>
-                                                        <span class="badge bg-primary">支付宝</span>
-                                                    <% } else { %>
-                                                        <span class="badge bg-secondary"><%= order.payment_method %></span>
-                                                    <% } %>
+                                                        <% } else if (order.payment_method==='alipay' ) { %>
+                                                            <span class="badge bg-primary">支付宝</span>
+                                                            <% } else { %>
+                                                                <span class="badge bg-secondary">
+                                                                    <%= order.payment_method %>
+                                                                </span>
+                                                                <% } %>
                                                 </td>
                                                 <td>
-                                                    <% if (order.status === 'completed') { %>
+                                                    <% if (order.status==='completed' ) { %>
                                                         <span class="badge bg-success badge-status">已完成</span>
-                                                    <% } else if (order.status === 'pending') { %>
-                                                        <span class="badge bg-warning badge-status">待支付</span>
-                                                    <% } else if (order.status === 'paid') { %>
-                                                        <span class="badge bg-info badge-status">已支付</span>
-                                                    <% } else if (order.status === 'cancelled') { %>
-                                                        <span class="badge bg-danger badge-status">已取消</span>
-                                                    <% } else if (order.status === 'expired') { %>
-                                                        <span class="badge bg-secondary badge-status">已过期</span>
-                                                    <% } else { %>
-                                                        <span class="badge bg-secondary badge-status"><%= order.status %></span>
-                                                    <% } %>
+                                                        <% } else if (order.status==='pending' ) { %>
+                                                            <span class="badge bg-warning badge-status">待支付</span>
+                                                            <% } else if (order.status==='paid' ) { %>
+                                                                <span class="badge bg-info badge-status">已支付</span>
+                                                                <% } else if (order.status==='cancelled' ) { %>
+                                                                    <span
+                                                                        class="badge bg-danger badge-status">已取消</span>
+                                                                    <% } else if (order.status==='expired' ) { %>
+                                                                        <span
+                                                                            class="badge bg-secondary badge-status">已过期</span>
+                                                                        <% } else { %>
+                                                                            <span
+                                                                                class="badge bg-secondary badge-status">
+                                                                                <%= order.status %>
+                                                                            </span>
+                                                                            <% } %>
                                                 </td>
                                                 <td>
-                                                    <div><%= new Date(order.created_at).toLocaleDateString('zh-CN') %></div>
-                                                    <small class="text-muted"><%= new Date(order.created_at).toLocaleTimeString('zh-CN') %></small>
+                                                    <div>
+                                                        <%= new Date(order.created_at).toLocaleDateString('zh-CN') %>
+                                                    </div>
+                                                    <small class="text-muted">
+                                                        <%= new Date(order.created_at).toLocaleTimeString('zh-CN') %>
+                                                    </small>
                                                 </td>
                                                 <td>
                                                     <div class="btn-group btn-group-sm">
-                                                        <button type="button" class="btn btn-outline-primary" title="查看详情" onclick="viewOrder('<%= order.id %>')">
+                                                        <button type="button" class="btn btn-outline-primary"
+                                                            title="查看详情" onclick="viewOrder('<%= order.id %>')">
                                                             <i class="fas fa-eye"></i>
                                                         </button>
-                                                        <% if (order.status === 'pending') { %>
-                                                            <button type="button" class="btn btn-outline-success" title="确认支付" onclick="confirmPayment('<%= order.id %>')">
+                                                        <% if (order.status==='pending' ) { %>
+                                                            <button type="button" class="btn btn-outline-success"
+                                                                title="确认支付"
+                                                                onclick="confirmPayment('<%= order.id %>')">
                                                                 <i class="fas fa-check"></i>
                                                             </button>
-                                                        <% } %>
-                                                        <% if (order.status === 'pending' || order.status === 'paid') { %>
-                                                            <button type="button" class="btn btn-outline-danger" title="取消订单" onclick="cancelOrder('<%= order.id %>')">
-                                                                <i class="fas fa-times"></i>
-                                                            </button>
-                                                        <% } %>
+                                                            <% } %>
+                                                                <% if (order.status==='pending' || order.status==='paid'
+                                                                    ) { %>
+                                                                    <button type="button" class="btn btn-outline-danger"
+                                                                        title="取消订单"
+                                                                        onclick="cancelOrder('<%= order.id %>')">
+                                                                        <i class="fas fa-times"></i>
+                                                                    </button>
+                                                                    <% } %>
                                                     </div>
                                                 </td>
                                             </tr>
-                                        <% }); %>
-                                    <% } else { %>
-                                        <tr>
-                                            <td colspan="9" class="text-center text-muted py-4">
-                                                <i class="fas fa-shopping-cart fa-3x mb-3 opacity-25"></i>
-                                                <p>暂无订单数据</p>
-                                            </td>
-                                        </tr>
-                                    <% } %>
+                                            <% }); %>
+                                                <% } else { %>
+                                                    <tr>
+                                                        <td colspan="9" class="text-center text-muted py-4">
+                                                            <i class="fas fa-shopping-cart fa-3x mb-3 opacity-25"></i>
+                                                            <p>暂无订单数据</p>
+                                                        </td>
+                                                    </tr>
+                                                    <% } %>
                                 </tbody>
                             </table>
                         </div>
 
                         <!-- 分页 -->
-                        <% if (pagination && pagination.totalPages > 1) { %>
+                        <% if (pagination && pagination.totalPages> 1) { %>
                             <nav aria-label="订单分页">
                                 <ul class="pagination justify-content-center">
                                     <li class="page-item <%= !pagination.hasPrev ? 'disabled' : '' %>">
-                                        <a class="page-link" href="?page=<%= pagination.page - 1 %><%= currentStatus ? '&status=' + currentStatus : '' %>">上一页</a>
+                                        <a class="page-link"
+                                            href="?page=<%= pagination.page - 1 %><%= currentStatus ? '&status=' + currentStatus : '' %>">上一页</a>
                                     </li>
-                                    
-                                    <% for (let i = Math.max(1, pagination.page - 2); i <= Math.min(pagination.totalPages, pagination.page + 2); i++) { %>
+
+                                    <% for (let i=Math.max(1, pagination.page - 2); i <=Math.min(pagination.totalPages,
+                                        pagination.page + 2); i++) { %>
                                         <li class="page-item <%= i === pagination.page ? 'active' : '' %>">
-                                            <a class="page-link" href="?page=<%= i %><%= currentStatus ? '&status=' + currentStatus : '' %>"><%= i %></a>
+                                            <a class="page-link"
+                                                href="?page=<%= i %><%= currentStatus ? '&status=' + currentStatus : '' %>">
+                                                <%= i %>
+                                            </a>
                                         </li>
-                                    <% } %>
-                                    
-                                    <li class="page-item <%= !pagination.hasNext ? 'disabled' : '' %>">
-                                        <a class="page-link" href="?page=<%= pagination.page + 1 %><%= currentStatus ? '&status=' + currentStatus : '' %>">下一页</a>
-                                    </li>
+                                        <% } %>
+
+                                            <li class="page-item <%= !pagination.hasNext ? 'disabled' : '' %>">
+                                                <a class="page-link"
+                                                    href="?page=<%= pagination.page + 1 %><%= currentStatus ? '&status=' + currentStatus : '' %>">下一页</a>
+                                            </li>
                                 </ul>
                             </nav>
-                        <% } %>
+                            <% } %>
                     </div>
                 </div>
             </main>
         </div>
     </div>
 
+    <!-- 订单详情弹窗 -->
+    <div class="modal fade" id="orderDetailsModal" tabindex="-1" aria-labelledby="orderDetailsModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="orderDetailsModalLabel">
+                        <i class="fas fa-shopping-cart me-2"></i>
+                        订单详情
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="orderDetailsContent">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">加载中...</span>
+                        </div>
+                        <p class="mt-2">正在加载订单详情...</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     <script>
         function viewOrder(orderId) {
-            // 查看订单详情
-            window.open(`/admin/orders/${orderId}`, '_blank');
+            // 显示弹窗
+            const modal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
+            modal.show();
+
+            // 重置内容为加载状态
+            document.getElementById('orderDetailsContent').innerHTML = `
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">加载中...</span>
+                    </div>
+                    <p class="mt-2">正在加载订单详情...</p>
+                </div>
+            `;
+
+            // 获取订单详情
+            fetch(`/api/admin/orders/${orderId}`)
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        displayOrderDetails(result.data);
+                    } else {
+                        document.getElementById('orderDetailsContent').innerHTML = `
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                ${result.message || '获取订单详情失败'}
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('orderDetailsContent').innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            网络错误，请稍后重试
+                        </div>
+                    `;
+                });
         }
-        
+
+        function displayOrderDetails(data) {
+            const { order, cards, payments } = data;
+
+            // 格式化状态显示
+            function getStatusBadge(status) {
+                const statusMap = {
+                    'completed': '<span class="badge bg-success">已完成</span>',
+                    'pending': '<span class="badge bg-warning">待支付</span>',
+                    'paid': '<span class="badge bg-info">已支付</span>',
+                    'cancelled': '<span class="badge bg-danger">已取消</span>',
+                    'expired': '<span class="badge bg-secondary">已过期</span>'
+                };
+                return statusMap[status] || `<span class="badge bg-secondary">${status}</span>`;
+            }
+
+            // 格式化支付方式
+            function getPaymentMethodBadge(method) {
+                const methodMap = {
+                    'usdt': '<span class="badge bg-info">USDT</span>',
+                    'alipay': '<span class="badge bg-primary">支付宝</span>'
+                };
+                return methodMap[method] || `<span class="badge bg-secondary">${method}</span>`;
+            }
+
+            let html = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="fw-bold mb-3">基本信息</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td class="text-muted">订单号:</td>
+                                <td><code>${order.order_no}</code></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">状态:</td>
+                                <td>${getStatusBadge(order.status)}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">商品:</td>
+                                <td>${order.product_name}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">数量:</td>
+                                <td>${order.quantity}张</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">单价:</td>
+                                <td>¥${parseFloat(order.unit_price).toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">总金额:</td>
+                                <td class="fw-bold text-primary">¥${parseFloat(order.total_amount).toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">支付方式:</td>
+                                <td>${getPaymentMethodBadge(order.payment_method)}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">创建时间:</td>
+                                <td>${new Date(order.created_at).toLocaleString('zh-CN')}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="fw-bold mb-3">用户信息</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td class="text-muted">用户名:</td>
+                                <td>${order.username ? '@' + order.username : '未设置'}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Telegram ID:</td>
+                                <td>${order.telegram_id}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">姓名:</td>
+                                <td>${(order.first_name || '') + ' ' + (order.last_name || '')}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">注册时间:</td>
+                                <td>${order.user_created_at ? new Date(order.user_created_at).toLocaleString('zh-CN') : '未知'}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            `;
+
+            // 如果有卡密信息
+            if (cards && cards.length > 0) {
+                html += `
+                    <hr>
+                    <h6 class="fw-bold mb-3">卡密信息 (${cards.length}张)</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>卡号</th>
+                                    <th>密码</th>
+                                    <th>状态</th>
+                                    <th>发放时间</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                cards.forEach(card => {
+                    html += `
+                        <tr>
+                            <td><code>${card.card_number}</code></td>
+                            <td><code>${card.card_password}</code></td>
+                            <td><span class="badge bg-${card.status === 'sold' ? 'success' : 'secondary'}">${card.status === 'sold' ? '已售出' : card.status}</span></td>
+                            <td>${card.delivered_at ? new Date(card.delivered_at).toLocaleString('zh-CN') : '-'}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            // 如果有支付记录
+            if (payments && payments.length > 0) {
+                html += `
+                    <hr>
+                    <h6 class="fw-bold mb-3">支付记录</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>支付方式</th>
+                                    <th>金额</th>
+                                    <th>状态</th>
+                                    <th>时间</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                payments.forEach(payment => {
+                    html += `
+                        <tr>
+                            <td>${getPaymentMethodBadge(payment.payment_method)}</td>
+                            <td>¥${parseFloat(payment.amount).toFixed(2)}</td>
+                            <td>${getStatusBadge(payment.status)}</td>
+                            <td>${new Date(payment.created_at).toLocaleString('zh-CN')}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            document.getElementById('orderDetailsContent').innerHTML = html;
+        }
+
         function confirmPayment(orderId) {
             if (confirm('确认手动确认此订单的支付状态？')) {
                 fetch('/api/payments/confirm', {
@@ -300,21 +571,21 @@
                     },
                     body: JSON.stringify({ order_id: orderId })
                 })
-                .then(response => response.json())
-                .then(result => {
-                    if (result.success) {
-                        alert('支付确认成功');
-                        location.reload();
-                    } else {
-                        alert('确认失败: ' + result.message);
-                    }
-                })
-                .catch(error => {
-                    alert('确认失败: ' + error.message);
-                });
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success) {
+                            alert('支付确认成功');
+                            location.reload();
+                        } else {
+                            alert('确认失败: ' + result.message);
+                        }
+                    })
+                    .catch(error => {
+                        alert('确认失败: ' + error.message);
+                    });
             }
         }
-        
+
         function cancelOrder(orderId) {
             if (confirm('确认取消此订单？')) {
                 // 这里可以调用取消订单的API
@@ -323,4 +594,5 @@
         }
     </script>
 </body>
+
 </html>

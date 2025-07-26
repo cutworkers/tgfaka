@@ -295,6 +295,7 @@ class AdminController {
 
       res.render('admin/orders', {
         title: '订单管理',
+        siteName: '卡密销售系统',
         admin: req.session.admin,
         orders,
         currentPage: 'orders',
@@ -309,6 +310,68 @@ class AdminController {
     } catch (error) {
       logger.error('显示订单管理页面失败', { error: error.message });
       res.status(500).send('服务器错误');
+    }
+  }
+
+  // 获取订单详情API
+  static async getOrderDetails(req, res) {
+    try {
+      const orderId = req.params.id;
+
+      // 获取订单详细信息
+      const order = await databaseService.get(`
+        SELECT o.*, 
+               p.name as product_name, 
+               p.description as product_description,
+               p.price as product_price,
+               u.username, 
+               u.telegram_id,
+               u.first_name,
+               u.last_name,
+               u.created_at as user_created_at
+        FROM orders o
+        LEFT JOIN products p ON o.product_id = p.id
+        LEFT JOIN users u ON o.user_id = u.id
+        WHERE o.id = ?
+      `, [orderId]);
+
+      if (!order) {
+        return res.status(404).json({
+          success: false,
+          message: '订单不存在'
+        });
+      }
+
+      // 获取订单相关的卡密信息
+      const cards = await databaseService.query(`
+        SELECT c.card_number, c.card_password, c.status, oc.created_at as delivered_at
+        FROM cards c
+        LEFT JOIN order_cards oc ON c.id = oc.card_id
+        WHERE oc.order_id = ?
+        ORDER BY oc.created_at ASC
+      `, [orderId]);
+
+      // 获取支付记录
+      const payments = await databaseService.query(`
+        SELECT * FROM payments 
+        WHERE order_id = ? 
+        ORDER BY created_at DESC
+      `, [orderId]);
+
+      res.json({
+        success: true,
+        data: {
+          order,
+          cards,
+          payments
+        }
+      });
+    } catch (error) {
+      logger.error('获取订单详情失败', { error: error.message, orderId: req.params.id });
+      res.status(500).json({
+        success: false,
+        message: '获取订单详情失败'
+      });
     }
   }
 

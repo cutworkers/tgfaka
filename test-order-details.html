@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>订单详情测试</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h2>订单详情弹窗测试</h2>
+        <button type="button" class="btn btn-primary" onclick="testOrderDetails()">
+            <i class="fas fa-eye me-2"></i>
+            测试订单详情
+        </button>
+    </div>
+
+    <!-- 订单详情弹窗 -->
+    <div class="modal fade" id="orderDetailsModal" tabindex="-1" aria-labelledby="orderDetailsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="orderDetailsModalLabel">
+                        <i class="fas fa-shopping-cart me-2"></i>
+                        订单详情
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="orderDetailsContent">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">加载中...</span>
+                        </div>
+                        <p class="mt-2">正在加载订单详情...</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function testOrderDetails() {
+            // 显示弹窗
+            const modal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
+            modal.show();
+            
+            // 模拟订单数据
+            const mockData = {
+                order: {
+                    order_no: 'ORD20240123001',
+                    status: 'completed',
+                    product_name: '测试商品',
+                    quantity: 2,
+                    unit_price: 10.00,
+                    total_amount: 20.00,
+                    payment_method: 'usdt',
+                    created_at: new Date().toISOString(),
+                    username: 'testuser',
+                    telegram_id: '123456789',
+                    first_name: '测试',
+                    last_name: '用户',
+                    user_created_at: new Date().toISOString()
+                },
+                cards: [
+                    {
+                        card_number: 'CARD001',
+                        card_password: 'PASS001',
+                        status: 'sold',
+                        delivered_at: new Date().toISOString()
+                    },
+                    {
+                        card_number: 'CARD002',
+                        card_password: 'PASS002',
+                        status: 'sold',
+                        delivered_at: new Date().toISOString()
+                    }
+                ],
+                payments: [
+                    {
+                        payment_method: 'usdt',
+                        amount: 20.00,
+                        status: 'completed',
+                        created_at: new Date().toISOString()
+                    }
+                ]
+            };
+            
+            // 延迟显示数据，模拟网络请求
+            setTimeout(() => {
+                displayOrderDetails(mockData);
+            }, 1000);
+        }
+        
+        function displayOrderDetails(data) {
+            const { order, cards, payments } = data;
+            
+            // 格式化状态显示
+            function getStatusBadge(status) {
+                const statusMap = {
+                    'completed': '<span class="badge bg-success">已完成</span>',
+                    'pending': '<span class="badge bg-warning">待支付</span>',
+                    'paid': '<span class="badge bg-info">已支付</span>',
+                    'cancelled': '<span class="badge bg-danger">已取消</span>',
+                    'expired': '<span class="badge bg-secondary">已过期</span>'
+                };
+                return statusMap[status] || `<span class="badge bg-secondary">${status}</span>`;
+            }
+            
+            // 格式化支付方式
+            function getPaymentMethodBadge(method) {
+                const methodMap = {
+                    'usdt': '<span class="badge bg-info">USDT</span>',
+                    'alipay': '<span class="badge bg-primary">支付宝</span>'
+                };
+                return methodMap[method] || `<span class="badge bg-secondary">${method}</span>`;
+            }
+            
+            let html = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="fw-bold mb-3">基本信息</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td class="text-muted">订单号:</td>
+                                <td><code>${order.order_no}</code></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">状态:</td>
+                                <td>${getStatusBadge(order.status)}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">商品:</td>
+                                <td>${order.product_name}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">数量:</td>
+                                <td>${order.quantity}张</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">单价:</td>
+                                <td>¥${parseFloat(order.unit_price).toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">总金额:</td>
+                                <td class="fw-bold text-primary">¥${parseFloat(order.total_amount).toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">支付方式:</td>
+                                <td>${getPaymentMethodBadge(order.payment_method)}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">创建时间:</td>
+                                <td>${new Date(order.created_at).toLocaleString('zh-CN')}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="fw-bold mb-3">用户信息</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td class="text-muted">用户名:</td>
+                                <td>${order.username ? '@' + order.username : '未设置'}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Telegram ID:</td>
+                                <td>${order.telegram_id}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">姓名:</td>
+                                <td>${(order.first_name || '') + ' ' + (order.last_name || '')}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">注册时间:</td>
+                                <td>${order.user_created_at ? new Date(order.user_created_at).toLocaleString('zh-CN') : '未知'}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            `;
+            
+            // 如果有卡密信息
+            if (cards && cards.length > 0) {
+                html += `
+                    <hr>
+                    <h6 class="fw-bold mb-3">卡密信息 (${cards.length}张)</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>卡号</th>
+                                    <th>密码</th>
+                                    <th>状态</th>
+                                    <th>发放时间</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                cards.forEach(card => {
+                    html += `
+                        <tr>
+                            <td><code>${card.card_number}</code></td>
+                            <td><code>${card.card_password}</code></td>
+                            <td><span class="badge bg-${card.status === 'sold' ? 'success' : 'secondary'}">${card.status === 'sold' ? '已售出' : card.status}</span></td>
+                            <td>${card.delivered_at ? new Date(card.delivered_at).toLocaleString('zh-CN') : '-'}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            
+            // 如果有支付记录
+            if (payments && payments.length > 0) {
+                html += `
+                    <hr>
+                    <h6 class="fw-bold mb-3">支付记录</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>支付方式</th>
+                                    <th>金额</th>
+                                    <th>状态</th>
+                                    <th>时间</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                payments.forEach(payment => {
+                    html += `
+                        <tr>
+                            <td>${getPaymentMethodBadge(payment.payment_method)}</td>
+                            <td>¥${parseFloat(payment.amount).toFixed(2)}</td>
+                            <td>${getStatusBadge(payment.status)}</td>
+                            <td>${new Date(payment.created_at).toLocaleString('zh-CN')}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            
+            document.getElementById('orderDetailsContent').innerHTML = html;
+        }
+    </script>
+</body>
+</html>

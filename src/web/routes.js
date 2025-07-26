@@ -28,6 +28,7 @@ router.get('/admin', requireAuth, (req, res) => {
 router.get('/admin/dashboard', requireAuth, AdminController.dashboard);
 router.get('/admin/products', requireAuth, AdminController.products);
 router.get('/admin/orders', requireAuth, AdminController.orders);
+router.get('/api/admin/orders/:id', requireAuth, AdminController.getOrderDetails);
 router.get('/admin/users', requireAuth, AdminController.users);
 router.get('/admin/cards', requireAuth, AdminController.cards);
 router.get('/admin/settings', requireAuth, AdminController.settings);
